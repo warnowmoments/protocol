@@ -480,19 +480,28 @@
   }
 
   function drawDataUrlOnCanvas(canvasId, dataUrl){
-    if(!dataUrl) return;
-    const canvas = document.getElementById(canvasId);
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    img.onload = ()=>{
-      try{ sigPads[canvasId]?.resize?.(false); }catch{}
-      const rect = canvas.getBoundingClientRect();
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.drawImage(img, 0, 0, rect.width, rect.height);
-      updatePhaseLocks();
-    };
-    img.src = dataUrl;
-  }
+  if(!dataUrl) return;
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+
+  img.onload = ()=>{
+    // Canvas zuerst auf korrekte Pixelgröße bringen (wie in setupSignature.resize)
+    try{ sigPads[canvasId]?.resize?.(false); }catch{}
+
+    // Wichtig: in Canvas-Pixeln zeichnen, nicht in CSS-Pixeln
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    updatePhaseLocks();
+    updateWorkflowLocks();
+    updateStatePill();
+  };
+
+  img.src = dataUrl;
+}
 
   function syncIdPhotoUI(doSave=true){
     const iF=document.getElementById('idFrontInfo'), iB=document.getElementById('idBackInfo');
