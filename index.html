@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
-  <title>Warnow Moments – Übergabe & Rückgabe (Aurora) – v13.9 (Team)</title>
+  <title>Warnow Moments – Übergabe & Rückgabe (Aurora) – v14.0 (Team)</title>
 
   <!-- PDF: jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -94,14 +94,14 @@
         <img id="brandLogoImg" alt="Warnow Moments Logo" style="display:none;">
         <div class="brandTitle">
           <h1>Übergabe & Rückgabe – Floß „Aurora“</h1>
-          <div class="sub">v13.9 · Team-Login + zentrale Protokolle (Supabase) · Kundendaten/Ausweis/Signaturen lokal</div>
+          <div class="sub">v14.0 · Team-Login + zentrale Protokolle (Supabase) · Kundendaten/Ausweis/Signaturen lokal</div>
         </div>
       </div>
 
       <div class="btns">
         <button class="primary" type="button" onclick="savePhase('handover')">Übergabe speichern</button>
         <button class="primary" type="button" onclick="savePhase('return')">Vorgang abschließen</button>
-        <button class="wm" type="button" onclick="openEmailDraft('handover')">Übergabe mailen (+ PDF)</button>
+        <button class="wm" type="button" onclick="openEmailDraft(mainTab)">Mailen (+ PDF)</button>
         <button type="button" onclick="window.print()">Drucken</button>
         <button class="danger" type="button" onclick="resetAll()">Neu</button>
       </div>
@@ -363,7 +363,7 @@
 
 <script>
   // ===================== Supabase =====================
-  // Hinweis: mailto kann keine Attachments (Standard); Anhänge nur über Share-Sheet. [web:1145]
+  // Datenschutz: Unterschriften/Ausweisfotos bleiben lokal; Supabase speichert nur Protokoll/Checklisten. [file:1144]
   const SUPABASE_URL = "https://fnktiyujyznbbhwkeyww.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_cJyOwgz2NXfDiTj7mRUVrQ_VMAMoVdd";
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -424,7 +424,7 @@
   ];
 
   // ===================== Lokale Speicherung (sensibel) =====================
-  const LS_LOCAL_KEY = 'wm_aurora_sensitive_local_v13_9';
+  const LS_LOCAL_KEY = 'wm_aurora_sensitive_local_v14_0';
 
   // ===================== State =====================
   let mainTab = 'handover';
@@ -486,11 +486,11 @@
     const ctx = canvas.getContext('2d');
     const img = new Image();
     img.onload = ()=>{
-      sigPads[canvasId]?.resize?.();
+      sigPads[canvasId]?.resize?.(false);
       const rect = canvas.getBoundingClientRect();
       ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.drawImage(img, 0, 0, rect.width, rect.height);
-      updateWorkflowLocks(); updateStatePill();
+      updatePhaseLocks();
     };
     img.src = dataUrl;
   }
@@ -640,56 +640,52 @@
     const canvas = document.getElementById(canvasId);
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-    function resize(keepDrawing=true){
-  // Snapshot (im CSS-Pixelmaß)
-  let snap = null;
-  if(keepDrawing){
-    try{
-      snap = canvas.toDataURL('image/png');
-    }catch(e){
-      snap = null;
+    function applyPen(){
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#0b2a3a';
     }
-  }
 
-  const rect = canvas.getBoundingClientRect();
-  const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    function resize(keepDrawing=true){
+      let snap = null;
+      if(keepDrawing){
+        try{ snap = canvas.toDataURL('image/png'); }catch(e){ snap = null; }
+      }
 
-  const newW = Math.max(1, Math.floor(rect.width * ratio));
-  const newH = Math.max(1, Math.floor(rect.height * ratio));
+      const rect = canvas.getBoundingClientRect();
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
 
-  // Wenn sich nichts ändert, nichts anfassen (wichtig gegen iOS Resize-Spam)
-  if(canvas.width === newW && canvas.height === newH){
-    ctx.setTransform(ratio,0,0,ratio,0,0);
-    ctx.lineWidth = 2.2;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#0b2a3a';
-    return;
-  }
+      const newW = Math.max(1, Math.floor(rect.width * ratio));
+      const newH = Math.max(1, Math.floor(rect.height * ratio));
 
-  canvas.width = newW;
-  canvas.height = newH;
+      if(canvas.width === newW && canvas.height === newH){
+        ctx.setTransform(ratio,0,0,ratio,0,0);
+        applyPen();
+        return;
+      }
 
-  ctx.setTransform(ratio,0,0,ratio,0,0);
-  ctx.lineWidth = 2.2;
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = '#0b2a3a';
+      canvas.width = newW;
+      canvas.height = newH;
+      ctx.setTransform(ratio,0,0,ratio,0,0);
+      applyPen();
 
-  // Restore Snapshot
-  if(snap){
-    const img = new Image();
-    img.onload = ()=>{
-      ctx.drawImage(img, 0, 0, rect.width, rect.height);
-    };
-    img.src = snap;
-  }
-}
-    resize();
+      if(snap){
+        const img = new Image();
+        img.onload = ()=>{
+          ctx.drawImage(img, 0, 0, rect.width, rect.height);
+        };
+        img.src = snap;
+      }
+    }
+
+    resize(true);
+
+    // Debounced resize (iPad scroll triggers)
     let resizeTimer = null;
-window.addEventListener('resize', ()=>{
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(()=>resize(true), 150);
-});
-
+    window.addEventListener('resize', ()=>{
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(()=>resize(true), 150);
+    });
 
     let drawing=false, last=null;
     function startAt(p){ drawing=true; last=p; }
@@ -698,7 +694,11 @@ window.addEventListener('resize', ()=>{
       ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke();
       last=p;
     }
-    function end(){ drawing=false; last=null; updateWorkflowLocks(); updateStatePill(); }
+    function end(){
+      drawing=false; last=null;
+      saveSensitiveLocal();
+      updateWorkflowLocks(); updateStatePill(); updatePhaseLocks();
+    }
 
     canvas.addEventListener('pointerdown', (e)=>{ startAt({x:e.offsetX,y:e.offsetY}); e.preventDefault(); });
     canvas.addEventListener('pointermove', (e)=>{ lineTo({x:e.offsetX,y:e.offsetY}); e.preventDefault(); });
@@ -728,12 +728,15 @@ window.addEventListener('resize', ()=>{
       dataUrl(){ return canvas.toDataURL('image/png'); },
       isEmpty(){
         const img = ctx.getImageData(0,0,canvas.width,canvas.height).data;
-        for(let i=3;i<img.length;i+=4){ if(img[i] !== 0) return false; }
+        for(let i=0;i<img.length;i+=4){
+          const r = img[i], g = img[i+1], b = img[i+2], a = img[i+3];
+          if(a > 20 && (r < 245 || g < 245 || b < 245)) return false;
+        }
         return true;
       }
     };
   }
-  function clearSig(id){ sigPads[id]?.clear(); updateWorkflowLocks(); updateStatePill(); }
+  function clearSig(id){ sigPads[id]?.clear(); saveSensitiveLocal(); updateWorkflowLocks(); updateStatePill(); updatePhaseLocks(); }
 
   // ===================== Workflow locks / state =====================
   function handoverSigned(){ return !sigPads.sigHCustomer.isEmpty() && !sigPads.sigHStaff.isEmpty(); }
@@ -779,6 +782,13 @@ window.addEventListener('resize', ()=>{
     document.getElementById('tabR').setAttribute('aria-selected', which==='return');
     document.getElementById('paneH').style.display = which==='handover' ? '' : 'none';
     document.getElementById('paneR').style.display = which==='return' ? '' : 'none';
+
+    // ensure canvas is correct after layout change
+    try{ sigPads.sigHCustomer?.resize?.(true); }catch{}
+    try{ sigPads.sigHStaff?.resize?.(true); }catch{}
+    try{ sigPads.sigRCustomer?.resize?.(true); }catch{}
+    try{ sigPads.sigRStaff?.resize?.(true); }catch{}
+
     updateWorkflowLocks(); updateStatePill();
   }
   function scrollToEnd(){
@@ -800,6 +810,7 @@ window.addEventListener('resize', ()=>{
     if (photos.id.back.dataUrl){ imgB.src=photos.id.back.dataUrl; imgB.style.display='block'; }
     else { imgB.removeAttribute('src'); imgB.style.display='none'; }
 
+    saveSensitiveLocal();
     updatePhaseLocks();
   }
 
@@ -1044,17 +1055,14 @@ window.addEventListener('resize', ()=>{
       closedAt = new Date().toISOString();
     }
 
-    // Sensibles immer lokal
     saveSensitiveLocal();
 
-    // Zentral speichern (ohne sensible Daten)
     const ok = await upsertCentralRecord();
     if(!ok) return;
 
     await refreshSaved();
     updateWorkflowLocks(); updatePhaseLocks(); updateStatePill();
 
-    // Auto-Mail (Hinweis: share() braucht User-Geste; wenn es nicht klappt, Fallback greift)
     if (phase === 'return' && document.getElementById('autoEmailR').checked) openEmailDraft('return');
     if (phase === 'handover' && document.getElementById('autoEmailH').checked) openEmailDraft('handover');
 
@@ -1095,7 +1103,6 @@ window.addEventListener('resize', ()=>{
     document.getElementById('bookingRef').value = central.booking_ref || '';
     document.getElementById('raftId').value = central.resource_id || 'Aurora';
 
-    // Zentral -> Form
     const h = central.handover || {};
     document.getElementById('handoverDate').value = h.date || '';
     document.getElementById('handoverTime').value = h.time || '';
@@ -1103,7 +1110,6 @@ window.addEventListener('resize', ()=>{
     document.getElementById('idChecked').value = h.idChecked || '';
     document.getElementById('handoverNotes').value = h.notes || '';
 
-    // FIX: nur Defaults, wenn wirklich nichts gespeichert ist
     handoverItems = (Array.isArray(h.checklist) && h.checklist.length > 0)
       ? h.checklist
       : buildItems('handover', HANDOVER_DEFAULT);
@@ -1114,15 +1120,12 @@ window.addEventListener('resize', ()=>{
     document.getElementById('returnBy').value = r.by || '';
     document.getElementById('returnNotes').value = r.notes || '';
 
-    // FIX: nur Defaults, wenn wirklich nichts gespeichert ist
     returnItems = (Array.isArray(r.checklist) && r.checklist.length > 0)
       ? r.checklist
       : buildItems('return', RETURN_DEFAULT);
 
-    // Status
     closedAt = (central.status === 'closed') ? (central.updated_at || new Date().toISOString()) : null;
 
-    // Lokales sensibles wiederherstellen
     const local = loadSensitiveLocal(recordId);
     sigPads.sigHCustomer.clear(); sigPads.sigHStaff.clear();
     sigPads.sigRCustomer.clear(); sigPads.sigRStaff.clear();
@@ -1132,8 +1135,8 @@ window.addEventListener('resize', ()=>{
       document.getElementById('customerEmail').value = local.customerEmail || '';
       photos.id.front = local.idFront || {dataUrl:null,name:null};
       photos.id.back = local.idBack || {dataUrl:null,name:null};
-
       syncIdPhotoUI();
+
       drawDataUrlOnCanvas('sigHCustomer', local.sigHCustomer);
       drawDataUrlOnCanvas('sigHStaff', local.sigHStaff);
       drawDataUrlOnCanvas('sigRCustomer', local.sigRCustomer);
@@ -1191,6 +1194,7 @@ window.addEventListener('resize', ()=>{
 
     sigPads.sigHCustomer.clear(); sigPads.sigHStaff.clear();
     sigPads.sigRCustomer.clear(); sigPads.sigRStaff.clear();
+    saveSensitiveLocal();
 
     renderChecklist('handover');
     renderChecklist('return');
@@ -1199,50 +1203,63 @@ window.addEventListener('resize', ()=>{
     updateWorkflowLocks(); updatePhaseLocks(); updateStatePill();
   }
 
-  // ===================== Email/PDF (voll) =====================
-  function emailSubject(phase){
-    const rid = document.getElementById('recordId').value.trim();
-    const raft = document.getElementById('raftId').value.trim() || 'Floß';
-    return (phase==='handover' ? 'Übergabeprotokoll' : 'Rückgabeprotokoll') + ` ${raft} ${rid}`;
+  // ===================== Email/PDF =====================
+  function mailSubjectForPhase(phase){
+    const ref = document.getElementById('bookingRef').value.trim();
+    if(phase==='return') return `Rückgabeprotokoll ${ref}`;
+    return `Übergabeprotokoll ${ref}`;
   }
-  function emailBodyText(phase){
+
+  function mailBodyForPhase(phase){
     const rid = document.getElementById('recordId').value.trim();
     const raft = document.getElementById('raftId').value.trim() || 'Floß';
     return [
       'Warnow Moments',
       (phase==='handover' ? 'Übergabeprotokoll' : 'Rückgabeprotokoll'),
       '',
+      'Buchungsreferenz: ' + document.getElementById('bookingRef').value.trim(),
       'Vorgang: ' + rid,
       'Floß: ' + raft,
-      'Buchung: ' + document.getElementById('bookingRef').value.trim(),
       'Kunde: ' + document.getElementById('customerName').value.trim(),
       '',
       'Im Anhang finden Sie das vollständige Protokoll als PDF.'
     ].join('\n');
   }
-  function showPdfOverlay(on){ document.getElementById('pdfLoadingOverlay').classList.toggle('show', !!on); }
 
-  function addImageSafe(pdf, dataUrl, format, x, y, w, h){
-    if(!dataUrl) return false;
-    try{
-      pdf.addImage(dataUrl, format, x, y, w, h);
-      return true;
-    }catch(e){
-      // Falls Format falsch geraten wurde, probieren wir JPEG/PNG.
-      try{
-        const fmt = (format === 'PNG') ? 'JPEG' : 'PNG';
-        pdf.addImage(dataUrl, fmt, x, y, w, h);
-        return true;
-      }catch(_e){
-        return false;
-      }
-    }
-  }
+  function showPdfOverlay(on){ document.getElementById('pdfLoadingOverlay').classList.toggle('show', !!on); }
 
   function guessImageFormat(dataUrl){
     if(!dataUrl) return null;
     if (String(dataUrl).startsWith('data:image/png')) return 'PNG';
     return 'JPEG';
+  }
+
+  function getImageSize(dataUrl){
+    return new Promise((res,rej)=>{
+      const img = new Image();
+      img.onload = ()=>res({w: img.naturalWidth || img.width, h: img.naturalHeight || img.height});
+      img.onerror = rej;
+      img.src = dataUrl;
+    });
+  }
+
+  async function addImageContain(pdf, dataUrl, format, x, y, boxW, boxH){
+    if(!dataUrl) return false;
+    try{
+      const {w, h} = await getImageSize(dataUrl);
+      if(!w || !h) return false;
+
+      const scale = Math.min(boxW / w, boxH / h);
+      const drawW = w * scale;
+      const drawH = h * scale;
+      const dx = x + (boxW - drawW)/2;
+      const dy = y + (boxH - drawH)/2;
+
+      pdf.addImage(dataUrl, format, dx, dy, drawW, drawH);
+      return true;
+    } catch(e){
+      return false;
+    }
   }
 
   async function generatePdfBlob(phase){
@@ -1255,6 +1272,7 @@ window.addEventListener('resize', ()=>{
       const recordId = document.getElementById('recordId').value.trim();
       const customerName = document.getElementById('customerName').value.trim();
       const raftId = document.getElementById('raftId').value.trim();
+      const bookingRef = document.getElementById('bookingRef').value.trim();
       const title = (phase === 'handover') ? 'Übergabeprotokoll' : 'Rückgabeprotokoll';
 
       let y = 16;
@@ -1268,12 +1286,11 @@ window.addEventListener('resize', ()=>{
       pdf.setFontSize(11);
       pdf.setFont(undefined, 'normal');
       pdf.setTextColor(11,18,32);
+      pdf.text('Buchungsreferenz: ' + bookingRef, 20, y); y += 6;
       pdf.text('Vorgang: ' + recordId, 20, y); y += 6;
       pdf.text('Floß: ' + raftId, 20, y); y += 6;
-      pdf.text('Kunde: ' + customerName, 20, y); y += 6;
-      pdf.text('Buchungsreferenz: ' + document.getElementById('bookingRef').value.trim(), 20, y); y += 8;
+      pdf.text('Kunde: ' + customerName, 20, y); y += 8;
 
-      // Abschnitt: Hinweise
       pdf.setFont(undefined, 'bold');
       pdf.text('Hinweise', 20, y); y += 6;
       pdf.setFont(undefined, 'normal');
@@ -1286,30 +1303,26 @@ window.addEventListener('resize', ()=>{
       pdf.text(noteLines, 20, y);
       y += Math.min(60, noteLines.length * 5) + 6;
 
-      // Abschnitt: Ausweisfotos (nur bei Übergabe sinnvoll)
       if (phase === 'handover'){
+        if (y > 230){ pdf.addPage(); y = 16; }
         pdf.setFont(undefined, 'bold');
         pdf.text('Ausweis-Fotos (lokal)', 20, y); y += 6;
         pdf.setFont(undefined, 'normal');
 
-        const fmtF = guessImageFormat(photos.id.front.dataUrl);
-        const fmtB = guessImageFormat(photos.id.back.dataUrl);
+        const fmtF = guessImageFormat(photos.id.front.dataUrl) || 'JPEG';
+        const fmtB = guessImageFormat(photos.id.back.dataUrl) || 'JPEG';
 
-        const boxW = 80, boxH = 45;
+        const boxW = 80, boxH = 50;
         const x1 = 20, x2 = 110;
-
         pdf.text('Vorderseite:', x1, y);
         pdf.text('Rückseite:', x2, y);
-        y += 2;
+        y += 4;
 
-        const imgY = y + 2;
-        addImageSafe(pdf, photos.id.front.dataUrl, fmtF || 'JPEG', x1, imgY, boxW, boxH);
-        addImageSafe(pdf, photos.id.back.dataUrl, fmtB || 'JPEG', x2, imgY, boxW, boxH);
-
-        y = imgY + boxH + 8;
+        await addImageContain(pdf, photos.id.front.dataUrl, fmtF, x1, y, boxW, boxH);
+        await addImageContain(pdf, photos.id.back.dataUrl, fmtB, x2, y, boxW, boxH);
+        y += boxH + 8;
       }
 
-      // Abschnitt: Checkliste (mit Fotos)
       pdf.setFont(undefined, 'bold');
       pdf.text('Checkliste', 20, y); y += 6;
       pdf.setFont(undefined, 'normal');
@@ -1318,13 +1331,13 @@ window.addEventListener('resize', ()=>{
       const doneCount = items.filter(i=>i.done).length;
       pdf.text(`Erledigt: ${doneCount}/${items.length}`, 20, y); y += 6;
 
-      // Wir drucken Items + optional Bild (bei Foto vorhanden)
       for (const it of items){
         if (y > 270){ pdf.addPage(); y = 16; }
 
         const mark = it.done ? '[x]' : '[ ]';
         const line = `${mark} ${it.code} – ${it.text}`;
         const lines = pdf.splitTextToSize(line, 170);
+        pdf.setTextColor(11,18,32);
         pdf.text(lines, 20, y);
         y += lines.length * 5;
 
@@ -1332,27 +1345,29 @@ window.addEventListener('resize', ()=>{
           const nlines = pdf.splitTextToSize('Notiz: ' + it.note, 170);
           pdf.setTextColor(60,72,96);
           pdf.text(nlines, 20, y);
-          pdf.setTextColor(11,18,32);
           y += nlines.length * 5;
         }
 
         if (it.photoDataUrl){
           const fmt = guessImageFormat(it.photoDataUrl) || 'JPEG';
-          const w = 120, h = 68;
-          if (y + h > 280){ pdf.addPage(); y = 16; }
+          const boxW = 120, boxH = 70;
+          if (y + boxH > 280){ pdf.addPage(); y = 16; }
+          pdf.setTextColor(11,18,32);
           pdf.text('Foto: ' + (it.photoName || ''), 20, y); y += 4;
-          addImageSafe(pdf, it.photoDataUrl, fmt, 20, y, w, h);
-          y += h + 6;
+
+          await addImageContain(pdf, it.photoDataUrl, fmt, 20, y, boxW, boxH);
+          y += boxH + 6;
         } else {
           y += 2;
         }
       }
 
-      // Abschnitt: Unterschriften (lokal)
       if (y > 240){ pdf.addPage(); y = 16; }
       pdf.setFont(undefined, 'bold');
+      pdf.setTextColor(11,42,58);
       pdf.text('Unterschriften (lokal)', 20, y); y += 6;
       pdf.setFont(undefined, 'normal');
+      pdf.setTextColor(11,18,32);
 
       const sigW = 80, sigH = 35;
       const sig1x = 20, sig2x = 110;
@@ -1363,20 +1378,18 @@ window.addEventListener('resize', ()=>{
       try{ s3 = sigPads.sigRCustomer.isEmpty() ? null : sigPads.sigRCustomer.dataUrl(); }catch{}
       try{ s4 = sigPads.sigRStaff.isEmpty() ? null : sigPads.sigRStaff.dataUrl(); }catch{}
 
-      // Übergabe
       pdf.text('Übergabe Kunde:', sig1x, y);
       pdf.text('Übergabe Vermieter:', sig2x, y);
-      y += 2;
-      addImageSafe(pdf, s1, 'PNG', sig1x, y+2, sigW, sigH);
-      addImageSafe(pdf, s2, 'PNG', sig2x, y+2, sigW, sigH);
+      y += 4;
+      if(s1) await addImageContain(pdf, s1, 'PNG', sig1x, y, sigW, sigH);
+      if(s2) await addImageContain(pdf, s2, 'PNG', sig2x, y, sigW, sigH);
       y += sigH + 10;
 
-      // Rückgabe
       pdf.text('Rückgabe Gast:', sig1x, y);
       pdf.text('Rückgabe Vermieter:', sig2x, y);
-      y += 2;
-      addImageSafe(pdf, s3, 'PNG', sig1x, y+2, sigW, sigH);
-      addImageSafe(pdf, s4, 'PNG', sig2x, y+2, sigW, sigH);
+      y += 4;
+      if(s3) await addImageContain(pdf, s3, 'PNG', sig1x, y, sigW, sigH);
+      if(s4) await addImageContain(pdf, s4, 'PNG', sig2x, y, sigW, sigH);
       y += sigH + 6;
 
       return pdf.output('blob');
@@ -1393,8 +1406,8 @@ window.addEventListener('resize', ()=>{
       return;
     }
 
-    const subject = emailSubject(phase);
-    const body = emailBodyText(phase);
+    const subject = mailSubjectForPhase(phase);
+    const body = mailBodyForPhase(phase);
 
     const blob = await generatePdfBlob(phase);
     if (!blob) return;
@@ -1407,9 +1420,7 @@ window.addEventListener('resize', ()=>{
       try{
         await navigator.share({ files: [file], title: subject, text: body });
         return;
-      }catch(e){
-        // Abbruch/Fallback
-      }
+      }catch(e){}
     }
 
     // Fallback: Download + mailto (mailto kann keine Anhänge) [web:1145]
