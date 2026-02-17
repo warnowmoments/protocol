@@ -512,24 +512,33 @@
   }
 
   function rehydrateLocalForCurrentRecord(){
-    const recordId = document.getElementById('recordId').value.trim();
-    if(!recordId) return;
-    const local = loadSensitiveLocal(recordId);
-    if(!local) return;
+  const recordId = document.getElementById('recordId').value.trim();
+  if(!recordId) return;
 
-    // Ausweis nachziehen (falls iOS Seite "frisch" gebaut hat)
-    if (!photos.id.front.dataUrl && local.idFront?.dataUrl) photos.id.front = local.idFront;
-    if (!photos.id.back.dataUrl && local.idBack?.dataUrl) photos.id.back = local.idBack;
-    syncIdPhotoUI(false);
+  const local = loadSensitiveLocal(recordId);
+  if(!local) return;
 
-    // Signaturen nur nachziehen, wenn Canvas leer ist
-    if(sigPads.sigHCustomer.isEmpty() && local.sigHCustomer) drawDataUrlOnCanvas('sigHCustomer', local.sigHCustomer);
-    if(sigPads.sigHStaff.isEmpty() && local.sigHStaff) drawDataUrlOnCanvas('sigHStaff', local.sigHStaff);
-    if(sigPads.sigRCustomer.isEmpty() && local.sigRCustomer) drawDataUrlOnCanvas('sigRCustomer', local.sigRCustomer);
-    if(sigPads.sigRStaff.isEmpty() && local.sigRStaff) drawDataUrlOnCanvas('sigRStaff', local.sigRStaff);
-
-    updateWorkflowLocks(); updateStatePill(); updatePhaseLocks();
+  // Stammdaten (lokal) nachziehen, damit Mailto/Betreff nie leer sind
+  if(!document.getElementById('customerName').value.trim() && local.customerName){
+    document.getElementById('customerName').value = local.customerName;
   }
+  if(!document.getElementById('customerEmail').value.trim() && local.customerEmail){
+    document.getElementById('customerEmail').value = local.customerEmail;
+  }
+
+  // Ausweis nachziehen
+  if (!photos.id.front.dataUrl && local.idFront?.dataUrl) photos.id.front = local.idFront;
+  if (!photos.id.back.dataUrl && local.idBack?.dataUrl) photos.id.back = local.idBack;
+  syncIdPhotoUI(false);
+
+  // Signaturen nachziehen (wenn Canvas leer)
+  if(sigPads.sigHCustomer.isEmpty() && local.sigHCustomer) drawDataUrlOnCanvas('sigHCustomer', local.sigHCustomer);
+  if(sigPads.sigHStaff.isEmpty() && local.sigHStaff) drawDataUrlOnCanvas('sigHStaff', local.sigHStaff);
+  if(sigPads.sigRCustomer.isEmpty() && local.sigRCustomer) drawDataUrlOnCanvas('sigRCustomer', local.sigRCustomer);
+  if(sigPads.sigRStaff.isEmpty() && local.sigRStaff) drawDataUrlOnCanvas('sigRStaff', local.sigRStaff);
+
+  updateWorkflowLocks(); updateStatePill(); updatePhaseLocks();
+}
 
   function rehydrateNow(){
     try{ rehydrateLocalForCurrentRecord(); }catch(e){}
@@ -1076,23 +1085,37 @@
 
   // ===================== Save / Load UI =====================
   async function savePhase(phase){
-    const v = validatePhase(phase);
-    if (!v.ok){ alert("Bitte ergänzen:\n- " + v.missing.join("\n- ")); return; }
+  rehydrateNow();
+  const v = validatePhase(phase);
+  if (!v.ok){ alert("Bitte ergänzen:\n- " + v.missing.join("\n- ")); return; }
 
-    if (phase === 'return' && returnSigned()){
-      closedAt = new Date().toISOString();
-    }
+  if (phase === 'return' && returnSigned()){
+    closedAt = new Date().toISOString();
+  }
 
-    saveSensitiveLocal();
+  saveSensitiveLocal();
 
-    const ok = await upsertCentralRecord();
-    if(!ok) return;
+  let centralOk = true;
+  try{
+    centralOk = await upsertCentralRecord();
+  }catch(e){
+    centralOk = false;
+  }
 
+  if(centralOk){
     await refreshSaved();
-    updateWorkflowLocks(); updatePhaseLocks(); updateStatePill();
+  }else{
+    alert("Hinweis: Zentral speichern ging gerade nicht. Mail/PDF wird trotzdem erstellt.");
+  }
 
-    if (phase === 'return' && document.getElementById('autoEmailR').checked) openEmailDraft('return');
-    if (phase === 'handover' && document.getElementById('autoEmailH').checked) openEmailDraft('handover');
+  updateWorkflowLocks(); updatePhaseLocks(); updateStatePill();
+
+  if (phase === 'return' && document.getElementById('autoEmailR').checked){ openEmailDraft('return'); }
+  if (phase === 'handover' && document.getElementById('autoEmailH').checked){ openEmailDraft('handover'); }
+
+  alert(phase==='handover' ? 'Übergabe gespeichert.' : (closedAt ? 'Rückgabe gespeichert. Vorgang geschlossen.' : 'Rückgabe gespeichert.'));
+}
+
 
     alert(phase==='handover' ? 'Übergabe gespeichert.' : (closedAt ? 'Rückgabe gespeichert. Vorgang geschlossen.' : 'Rückgabe gespeichert.'));
   }
@@ -1415,45 +1438,72 @@
   }
 
   async function openEmailDraft(phase){
-    const to = document.getElementById('customerEmail').value.trim();
-    if (!to){
-      alert("Bitte E-Mail des Kunden eintragen.");
-      document.getElementById('customerEmail').focus();
-      return;
-    }
+  // Vorher alles lokal sichern
+  try{ saveSensitiveLocal(); }catch(e){}
 
-    const subject = mailSubjectForPhase(phase);
-    const body = mailBodyForPhase(phase);
+  // Rehydrate, falls iOS zurückkam und Felder/Canvas leer sind
+  try{ rehydrateNow(); }catch(e){}
 
-    // Vor App-Wechsel nochmal speichern
-    try{ saveSensitiveLocal(); }catch(e){}
-
-    const blob = await generatePdfBlob(phase);
-    if (!blob) return;
-
-    const safeName = subject.replace(/[^a-zA-Z0-9-_]+/g, '_') + '.pdf';
-    const file = new File([blob], safeName, { type: 'application/pdf' });
-
-    if (navigator.canShare && navigator.canShare({ files: [file] })){
-      try{
-        await navigator.share({ files: [file], title: subject, text: body });
-        return;
-      }catch(e){}
-    }
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = safeName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 1500);
-
-    const mailtoUrl =
-      `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nPDF wurde heruntergeladen. Bitte diese Datei manuell anhängen.")}`;
-    setTimeout(()=>{ window.location.href = mailtoUrl; }, 400);
+  const to = document.getElementById('customerEmail').value.trim();
+  if (!to){
+    alert("Bitte E-Mail des Kunden eintragen.");
+    document.getElementById('customerEmail').focus();
+    return;
   }
+
+  const subject = mailSubjectForPhase(phase);
+  const body = mailBodyForPhase(phase);
+
+  // 1) Versuch: Share-Sheet mit Anhang (einziger Weg für „Mail mit PDF-Anhang“ auf iOS)
+  // Wichtig: Kein Download-Popup davor auslösen.
+  let blob = null;
+  try{
+    blob = await generatePdfBlob(phase);
+  }catch(e){
+    blob = null;
+  }
+
+  if (!blob){
+    // Fallback: wenigstens Mailto öffnen (ohne Anhang)
+    const mailtoUrl =
+      `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+    return;
+  }
+
+  const safeName = subject.replace(/[^a-zA-Z0-9-_]+/g, '_') + '.pdf';
+  const file = new File([blob], safeName, { type: 'application/pdf' });
+
+  const canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+  if (canShareFiles){
+    try{
+      await navigator.share({ files: [file], title: subject, text: body });
+      return;
+    }catch(e){
+      // Abbruch/Fehler -> weiter mit mailto
+    }
+  }
+
+  // 2) Fallback ohne Anhang: mailto (Adresse+Betreff sollten damit zuverlässig gefüllt sein)
+  const mailtoUrl =
+    `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nHinweis: Ein PDF-Anhang ist in diesem Modus nicht automatisch möglich. Bitte PDF manuell anhängen (Download/Dateien).")}`;
+  window.location.href = mailtoUrl;
+
+  // Optional zusätzlich: PDF-Download anbieten (ohne mailto zu blocken)
+  setTimeout(()=>{
+    try{
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = safeName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 1500);
+    }catch(e){}
+  }, 900);
+}
+
 
   function updateShareStatus(){
     const el = document.getElementById('shareStatus');
