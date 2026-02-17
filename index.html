@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
-  <title>Warnow Moments – Übergabe & Rückgabe (Aurora) – v14.0 (Team)</title>
+  <title>Warnow Moments – Übergabe & Rückgabe (Aurora) – v14.2 (Team)</title>
 
   <!-- PDF: jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -69,7 +69,8 @@
     .photoThumb{ width:100%; max-height:190px; object-fit:contain; margin-top:8px; border:1px solid var(--line); border-radius:10px; background:#fff; display:none; }
     .sigBox{ border:1px dashed rgba(11,42,58,.35); border-radius:12px; padding:10px; background: linear-gradient(180deg, #f5f9ff, #ffffff); }
     canvas.sig{ width:100%; height:170px; background:#ffffff; border:1px solid var(--line); border-radius:10px; touch-action:none; -webkit-user-select:none; user-select:none; }
-    .sigLocked{ opacity:.55; } .sigLocked canvas{ pointer-events:none; }
+    .sigLocked{ opacity:.55; }
+    .sigLocked canvas{ pointer-events:none; }
     .bannerWarn{ border:1px solid #fde68a; background:#fffbeb; color:#92400e; padding:10px 12px; border-radius:12px; margin:10px 0; }
     .bannerOk{ border:1px solid #bbf7d0; background:#f0fdf4; color:#166534; padding:10px 12px; border-radius:12px; margin:10px 0; }
     .modal{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:14px; z-index:9999; }
@@ -94,7 +95,7 @@
         <img id="brandLogoImg" alt="Warnow Moments Logo" style="display:none;">
         <div class="brandTitle">
           <h1>Übergabe & Rückgabe – Floß „Aurora“</h1>
-          <div class="sub">v14.0 · Team-Login + zentrale Protokolle (Supabase) · Kundendaten/Ausweis/Signaturen lokal</div>
+          <div class="sub">v14.2 · Team-Login + zentrale Protokolle (Supabase) · Kundendaten/Ausweis/Signaturen lokal</div>
         </div>
       </div>
 
@@ -363,7 +364,6 @@
 
 <script>
   // ===================== Supabase =====================
-  // Datenschutz: Unterschriften/Ausweisfotos bleiben lokal; Supabase speichert nur Protokoll/Checklisten. [file:1144]
   const SUPABASE_URL = "https://fnktiyujyznbbhwkeyww.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_cJyOwgz2NXfDiTj7mRUVrQ_VMAMoVdd";
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -424,7 +424,7 @@
   ];
 
   // ===================== Lokale Speicherung (sensibel) =====================
-  const LS_LOCAL_KEY = 'wm_aurora_sensitive_local_v14_0';
+  const LS_LOCAL_KEY = 'wm_aurora_sensitive_local_v14_2';
 
   // ===================== State =====================
   let mainTab = 'handover';
@@ -456,7 +456,7 @@
   function isSecureCameraPossible(){ return !!(navigator.mediaDevices?.getUserMedia && window.isSecureContext); }
 
   function getLocalMap(){ try{ return JSON.parse(localStorage.getItem(LS_LOCAL_KEY) || '{}'); }catch{ return {}; } }
-  function setLocalMap(m){ localStorage.setItem(LS_LOCAL_KEY, JSON.stringify(m || {})); }
+  function setLocalMap(m){ try{ localStorage.setItem(LS_LOCAL_KEY, JSON.stringify(m || {})); }catch(e){} }
 
   function saveSensitiveLocal(){
     const recordId = document.getElementById('recordId').value.trim();
@@ -486,13 +486,31 @@
     const ctx = canvas.getContext('2d');
     const img = new Image();
     img.onload = ()=>{
-      sigPads[canvasId]?.resize?.(false);
+      try{ sigPads[canvasId]?.resize?.(false); }catch{}
       const rect = canvas.getBoundingClientRect();
       ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.drawImage(img, 0, 0, rect.width, rect.height);
       updatePhaseLocks();
     };
     img.src = dataUrl;
+  }
+
+  function rehydrateLocalForCurrentRecord(){
+    const recordId = document.getElementById('recordId').value.trim();
+    if(!recordId) return;
+    const local = loadSensitiveLocal(recordId);
+    if(!local) return;
+
+    if (!photos.id.front.dataUrl && local.idFront?.dataUrl) photos.id.front = local.idFront;
+    if (!photos.id.back.dataUrl && local.idBack?.dataUrl) photos.id.back = local.idBack;
+    syncIdPhotoUI(false);
+
+    if(sigPads.sigHCustomer.isEmpty() && local.sigHCustomer) drawDataUrlOnCanvas('sigHCustomer', local.sigHCustomer);
+    if(sigPads.sigHStaff.isEmpty() && local.sigHStaff) drawDataUrlOnCanvas('sigHStaff', local.sigHStaff);
+    if(sigPads.sigRCustomer.isEmpty() && local.sigRCustomer) drawDataUrlOnCanvas('sigRCustomer', local.sigRCustomer);
+    if(sigPads.sigRStaff.isEmpty() && local.sigRStaff) drawDataUrlOnCanvas('sigRStaff', local.sigRStaff);
+
+    updateWorkflowLocks(); updateStatePill(); updatePhaseLocks();
   }
 
   // ===================== Checklist model =====================
@@ -680,7 +698,6 @@
 
     resize(true);
 
-    // Debounced resize (iPad scroll triggers)
     let resizeTimer = null;
     window.addEventListener('resize', ()=>{
       clearTimeout(resizeTimer);
@@ -736,7 +753,11 @@
       }
     };
   }
-  function clearSig(id){ sigPads[id]?.clear(); saveSensitiveLocal(); updateWorkflowLocks(); updateStatePill(); updatePhaseLocks(); }
+  function clearSig(id){
+    sigPads[id]?.clear();
+    saveSensitiveLocal();
+    updateWorkflowLocks(); updateStatePill(); updatePhaseLocks();
+  }
 
   // ===================== Workflow locks / state =====================
   function handoverSigned(){ return !sigPads.sigHCustomer.isEmpty() && !sigPads.sigHStaff.isEmpty(); }
@@ -783,13 +804,15 @@
     document.getElementById('paneH').style.display = which==='handover' ? '' : 'none';
     document.getElementById('paneR').style.display = which==='return' ? '' : 'none';
 
-    // ensure canvas is correct after layout change
     try{ sigPads.sigHCustomer?.resize?.(true); }catch{}
     try{ sigPads.sigHStaff?.resize?.(true); }catch{}
     try{ sigPads.sigRCustomer?.resize?.(true); }catch{}
     try{ sigPads.sigRStaff?.resize?.(true); }catch{}
 
-    updateWorkflowLocks(); updateStatePill();
+    // Wichtig: lokale Signaturen nachziehen (falls iOS nach Mail zurück "leer" ist)
+    setTimeout(rehydrateLocalForCurrentRecord, 30);
+
+    updateWorkflowLocks(); updateStatePill(); updatePhaseLocks();
   }
   function scrollToEnd(){
     const el = document.getElementById(mainTab === 'handover' ? 'handoverEnd' : 'returnEnd');
@@ -797,7 +820,7 @@
   }
 
   // ===================== Ausweisfoto UI =====================
-  function syncIdPhotoUI(){
+  function syncIdPhotoUI(doSave=true){
     const iF=document.getElementById('idFrontInfo'), iB=document.getElementById('idBackInfo');
     const imgF=document.getElementById('idFrontImg'), imgB=document.getElementById('idBackImg');
 
@@ -810,7 +833,7 @@
     if (photos.id.back.dataUrl){ imgB.src=photos.id.back.dataUrl; imgB.style.display='block'; }
     else { imgB.removeAttribute('src'); imgB.style.display='none'; }
 
-    saveSensitiveLocal();
+    if(doSave) saveSensitiveLocal();
     updatePhaseLocks();
   }
 
@@ -878,7 +901,7 @@
     if (target.type==='id'){
       photos.id[target.side].dataUrl = dataUrl;
       photos.id[target.side].name = name;
-      syncIdPhotoUI();
+      syncIdPhotoUI(true);
       return;
     }
     if (target.type==='item'){
@@ -898,7 +921,7 @@
     if (target.type==='id'){
       photos.id[target.side].dataUrl = null;
       photos.id[target.side].name = null;
-      syncIdPhotoUI();
+      syncIdPhotoUI(true);
       return;
     }
     if (target.type==='item'){
@@ -982,6 +1005,7 @@
       if (sigPads.sigHStaff.isEmpty()) missing.push('Übergabe: Unterschrift Vermieter fehlt.');
     }
     if (phase==='return'){
+      rehydrateLocalForCurrentRecord(); // extra sicher vor Prüfung
       if (!handoverSigned()) missing.push('Rückgabe: Übergabe ist noch nicht unterschrieben.');
       const ids = ['returnDate','returnTime'];
       for(const id of ids){
@@ -1109,20 +1133,14 @@
     document.getElementById('handoverBy').value = h.by || '';
     document.getElementById('idChecked').value = h.idChecked || '';
     document.getElementById('handoverNotes').value = h.notes || '';
-
-    handoverItems = (Array.isArray(h.checklist) && h.checklist.length > 0)
-      ? h.checklist
-      : buildItems('handover', HANDOVER_DEFAULT);
+    handoverItems = (Array.isArray(h.checklist) && h.checklist.length>0) ? h.checklist : buildItems('handover', HANDOVER_DEFAULT);
 
     const r = central.return || central["return"] || {};
     document.getElementById('returnDate').value = r.date || '';
     document.getElementById('returnTime').value = r.time || '';
     document.getElementById('returnBy').value = r.by || '';
     document.getElementById('returnNotes').value = r.notes || '';
-
-    returnItems = (Array.isArray(r.checklist) && r.checklist.length > 0)
-      ? r.checklist
-      : buildItems('return', RETURN_DEFAULT);
+    returnItems = (Array.isArray(r.checklist) && r.checklist.length>0) ? r.checklist : buildItems('return', RETURN_DEFAULT);
 
     closedAt = (central.status === 'closed') ? (central.updated_at || new Date().toISOString()) : null;
 
@@ -1135,7 +1153,7 @@
       document.getElementById('customerEmail').value = local.customerEmail || '';
       photos.id.front = local.idFront || {dataUrl:null,name:null};
       photos.id.back = local.idBack || {dataUrl:null,name:null};
-      syncIdPhotoUI();
+      syncIdPhotoUI(false);
 
       drawDataUrlOnCanvas('sigHCustomer', local.sigHCustomer);
       drawDataUrlOnCanvas('sigHStaff', local.sigHStaff);
@@ -1146,12 +1164,14 @@
       document.getElementById('customerEmail').value = '';
       photos.id.front = {dataUrl:null,name:null};
       photos.id.back = {dataUrl:null,name:null};
-      syncIdPhotoUI();
+      syncIdPhotoUI(false);
     }
 
     renderChecklist('handover');
     renderChecklist('return');
+
     updateWorkflowLocks(); updatePhaseLocks(); updateStatePill();
+    setTimeout(rehydrateLocalForCurrentRecord, 30);
   }
 
   async function clearSaved(){
@@ -1176,7 +1196,7 @@
     document.getElementById('customerEmail').value = '';
     photos.id.front = {dataUrl:null,name:null};
     photos.id.back = {dataUrl:null,name:null};
-    syncIdPhotoUI();
+    syncIdPhotoUI(true);
 
     document.getElementById('handoverDate').value = nowLocalDate();
     document.getElementById('handoverTime').value = nowLocalTime();
@@ -1194,6 +1214,7 @@
 
     sigPads.sigHCustomer.clear(); sigPads.sigHStaff.clear();
     sigPads.sigRCustomer.clear(); sigPads.sigRStaff.clear();
+
     saveSensitiveLocal();
 
     renderChecklist('handover');
@@ -1206,10 +1227,8 @@
   // ===================== Email/PDF =====================
   function mailSubjectForPhase(phase){
     const ref = document.getElementById('bookingRef').value.trim();
-    if(phase==='return') return `Rückgabeprotokoll ${ref}`;
-    return `Übergabeprotokoll ${ref}`;
+    return (phase==='return' ? 'Rückgabeprotokoll ' : 'Übergabeprotokoll ') + ref;
   }
-
   function mailBodyForPhase(phase){
     const rid = document.getElementById('recordId').value.trim();
     const raft = document.getElementById('raftId').value.trim() || 'Floß';
@@ -1225,7 +1244,6 @@
       'Im Anhang finden Sie das vollständige Protokoll als PDF.'
     ].join('\n');
   }
-
   function showPdfOverlay(on){ document.getElementById('pdfLoadingOverlay').classList.toggle('show', !!on); }
 
   function guessImageFormat(dataUrl){
@@ -1233,7 +1251,6 @@
     if (String(dataUrl).startsWith('data:image/png')) return 'PNG';
     return 'JPEG';
   }
-
   function getImageSize(dataUrl){
     return new Promise((res,rej)=>{
       const img = new Image();
@@ -1242,22 +1259,19 @@
       img.src = dataUrl;
     });
   }
-
   async function addImageContain(pdf, dataUrl, format, x, y, boxW, boxH){
     if(!dataUrl) return false;
     try{
       const {w, h} = await getImageSize(dataUrl);
       if(!w || !h) return false;
-
       const scale = Math.min(boxW / w, boxH / h);
       const drawW = w * scale;
       const drawH = h * scale;
       const dx = x + (boxW - drawW)/2;
       const dy = y + (boxH - drawH)/2;
-
       pdf.addImage(dataUrl, format, dx, dy, drawW, drawH);
       return true;
-    } catch(e){
+    }catch(e){
       return false;
     }
   }
@@ -1276,7 +1290,6 @@
       const title = (phase === 'handover') ? 'Übergabeprotokoll' : 'Rückgabeprotokoll';
 
       let y = 16;
-
       pdf.setTextColor(11,42,58);
       pdf.setFontSize(16);
       pdf.setFont(undefined, 'bold');
@@ -1354,7 +1367,6 @@
           if (y + boxH > 280){ pdf.addPage(); y = 16; }
           pdf.setTextColor(11,18,32);
           pdf.text('Foto: ' + (it.photoName || ''), 20, y); y += 4;
-
           await addImageContain(pdf, it.photoDataUrl, fmt, 20, y, boxW, boxH);
           y += boxH + 6;
         } else {
@@ -1415,7 +1427,6 @@
     const safeName = subject.replace(/[^a-zA-Z0-9-_]+/g, '_') + '.pdf';
     const file = new File([blob], safeName, { type: 'application/pdf' });
 
-    // Best case: Share-Sheet mit Datei-Anhang
     if (navigator.canShare && navigator.canShare({ files: [file] })){
       try{
         await navigator.share({ files: [file], title: subject, text: body });
@@ -1423,7 +1434,6 @@
       }catch(e){}
     }
 
-    // Fallback: Download + mailto (mailto kann keine Anhänge) [web:1145]
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1473,9 +1483,15 @@
     document.getElementById('returnDate').value = nowLocalDate();
     document.getElementById('returnTime').value = nowLocalTime();
 
-    syncIdPhotoUI();
+    syncIdPhotoUI(false);
     updateWorkflowLocks(); updatePhaseLocks(); updateStatePill();
     updateShareStatus();
+
+    // Wenn iOS nach Mail zurückkommt, rehydraten
+    window.addEventListener('focus', ()=>setTimeout(rehydrateLocalForCurrentRecord, 60));
+    document.addEventListener('visibilitychange', ()=>{
+      if(!document.hidden) setTimeout(rehydrateLocalForCurrentRecord, 60);
+    });
 
     const { data } = await sb.auth.getSession();
     if(data.session){
