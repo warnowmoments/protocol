@@ -3,12 +3,9 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-  <title>Warnow Moments Übergabe Rückgabe – Aurora v14.6</title>
+  <title>Warnow Moments Übergabe Rückgabe – Aurora v14.7</title>
 
-  <!-- PDF: jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-  <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -109,10 +106,7 @@
       background:transparent;
       border-color:var(--line);
     }
-    button[disabled]{
-      opacity:.6;
-      cursor:not-allowed;
-    }
+    button[disabled]{ opacity:.6; cursor:not-allowed; }
 
     .tiny{ font-size:12px; color:var(--muted); }
     .pill{
@@ -125,7 +119,6 @@
       color:var(--muted);
     }
     .pill.ok{ border-color:#bbf7d0; color:#166534; background:#f0fdf4; }
-    .pill.bad{ border-color:#fecaca; color:#991b1b; background:#fff1f2; }
 
     .tabs{ display:flex; gap:10px; flex-wrap:wrap; margin:10px 0; }
     .tabBtn[aria-selected="true"]{ background:#e8efff; border-color:#bcd0ff; }
@@ -192,7 +185,6 @@
       white-space:nowrap;
       margin:0;
     }
-    .chk span{ line-height:1; }
     .chk input{ width:auto; margin:0; }
 
     .photoThumb{
@@ -306,10 +298,26 @@
     }
     .pdfLoading.show{ display:flex; }
 
-    @media print{
-      button, video, .modal, .noPrint, .topbar{ display:none !important; }
-      body{ background:#fff; }
-      .card{ box-shadow:none; }
+    /* Login-Gate Overlay */
+    .gateOverlay{
+      position:fixed;
+      inset:0;
+      background:rgba(255,255,255,.78);
+      backdrop-filter: blur(2px);
+      display:none;
+      z-index:9000;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .gateOverlay.show{ display:flex; }
+    .gateCard{
+      width:min(720px,100%);
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px;
+      box-shadow:0 10px 26px rgba(17,24,39,.12);
     }
   </style>
 </head>
@@ -321,7 +329,7 @@
         <img id="brandLogoImg" alt="Warnow Moments Logo" style="display:none"/>
         <div class="brandTitle">
           <h1>Übergabe & Rückgabe – Floß „Aurora“</h1>
-          <div class="sub">v14.6 · weniger Popups · Anti-Doppelklick · PDF-Footer</div>
+          <div class="sub">v14.7 · Login-Gate · keine „Bitte einloggen“-Popups</div>
         </div>
       </div>
 
@@ -332,6 +340,15 @@
         <button type="button" onclick="window.print()">Drucken</button>
         <button class="danger" type="button" onclick="resetAll()">Neu</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Gate Overlay -->
+  <div id="gateOverlay" class="gateOverlay noPrint" aria-hidden="true">
+    <div class="gateCard">
+      <h2 class="sectionTitle">Bitte einloggen</h2>
+      <div class="tiny">Die Eingaben sind erst nach Team-Login aktiv.</div>
+      <div class="tiny" style="margin-top:8px;">Wenn ihr bereits eingeloggt seid, wartet kurz (Session lädt) oder tippt einmal auf „Liste aktualisieren“ im Login-Bereich.</div>
     </div>
   </div>
 
@@ -356,7 +373,7 @@
       <div class="tiny" id="netStatus" style="margin-top:4px;"></div>
     </section>
 
-    <section class="card" style="margin-top:12px;">
+    <section class="card" style="margin-top:12px;" id="appArea">
       <h2 class="sectionTitle">Stammdaten (lokal fürs PDF/Mail) + Schlüssel (zentral)</h2>
 
       <div class="row cols3">
@@ -400,170 +417,168 @@
         </div>
         <div>
           <label>Hinweis</label>
-          <div class="tiny">iPad: „Mailen (+ PDF)“ → am besten „Teilen → Mail“ (mit Anhang). Sonst Download + Mail-Entwurf.</div>
+          <div class="tiny">iPad: „Mailen (+ PDF)“ → „Teilen → Mail“ (mit Anhang). Sonst Download + Mail-Entwurf.</div>
           <div class="tiny" id="shareStatus" style="margin-top:6px;"></div>
         </div>
         <div></div>
       </div>
-    </section>
 
-    <div class="tabs noPrint">
-      <button class="tabBtn" id="tabH" aria-selected="true" type="button" onclick="setMainTab('handover')">Übergabe</button>
-      <button class="tabBtn" id="tabR" aria-selected="false" type="button" onclick="setMainTab('return')">Rückgabe</button>
-      <button class="ghost" type="button" onclick="scrollToEnd()">Zum Abschluss (Unterschrift)</button>
-    </div>
-
-    <!-- Übergabe -->
-    <section id="paneH" class="card">
-      <h2 class="sectionTitle">Übergabe</h2>
-
-      <div class="row cols3">
-        <div>
-          <label>Datum *</label>
-          <input id="handoverDate" type="date" required/>
-        </div>
-        <div>
-          <label>Uhrzeit *</label>
-          <input id="handoverTime" type="time" required/>
-        </div>
-        <div>
-          <label>Übergabe durchgeführt von (Mitarbeiter)</label>
-          <input id="handoverBy" type="text" placeholder="Name"/>
-        </div>
+      <div class="tabs noPrint">
+        <button class="tabBtn" id="tabH" aria-selected="true" type="button" onclick="setMainTab('handover')">Übergabe</button>
+        <button class="tabBtn" id="tabR" aria-selected="false" type="button" onclick="setMainTab('return')">Rückgabe</button>
+        <button class="ghost" type="button" onclick="scrollToEnd()">Zum Abschluss (Unterschrift)</button>
       </div>
 
-      <div class="row" style="margin-top:10px;">
-        <div>
-          <label>Ausweis geprüft? *</label>
-          <select id="idChecked" required>
-            <option value=""></option>
-            <option value="ja">Ja</option>
-            <option value="nein">Nein</option>
-          </select>
-        </div>
-      </div>
+      <section id="paneH" class="card" style="margin-top:10px;">
+        <h2 class="sectionTitle">Übergabe</h2>
 
-      <h3 class="sectionTitle" style="margin-top:14px;">Ausweis – Fotos (nur lokal)</h3>
-      <div class="row cols2">
-        <div class="item">
-          <div class="itemTop">
-            <div class="itemTitle">Vorderseite</div>
-            <div class="itemMeta">
-              <button type="button" onclick="startCapture({type:'id', side:'front'})">Foto aufnehmen</button>
-              <button type="button" onclick="clearTargetPhoto({type:'id', side:'front'})">Löschen</button>
-            </div>
-          </div>
-          <div class="tiny" id="idFrontInfo"></div>
-          <img id="idFrontImg" class="photoThumb" alt="Ausweis Vorderseite"/>
-        </div>
-        <div class="item">
-          <div class="itemTop">
-            <div class="itemTitle">Rückseite</div>
-            <div class="itemMeta">
-              <button type="button" onclick="startCapture({type:'id', side:'back'})">Foto aufnehmen</button>
-              <button type="button" onclick="clearTargetPhoto({type:'id', side:'back'})">Löschen</button>
-            </div>
-          </div>
-          <div class="tiny" id="idBackInfo"></div>
-          <img id="idBackImg" class="photoThumb" alt="Ausweis Rückseite"/>
-        </div>
-      </div>
-
-      <div class="row" style="margin-top:10px;">
-        <div>
-          <label>Übergabe-Hinweise / Besonderheiten *</label>
-          <textarea id="handoverNotes" required></textarea>
-        </div>
-      </div>
-
-      <h3 class="sectionTitle" style="margin-top:14px;">Übergabe-Checkliste</h3>
-      <div class="tiny">Kategorien sind einzeln aufklappbar, erste Kategorie ist offen.</div>
-      <div id="handoverChecklistWrap" style="margin-top:10px;"></div>
-
-      <div style="margin-top:14px;" id="handoverEnd">
-        <h3 class="sectionTitle">Unterschriften (nur lokal)</h3>
-        <div id="handoverSigLockMsg" class="tiny">Bitte erst alle Übergabe-Punkte erledigen.</div>
-
-        <div class="row cols2" id="handoverSigBox">
-          <div class="sigBox">
-            <label>Übergabe – Unterschrift Kunde *</label>
-            <canvas id="sigHCustomer" class="sig"></canvas>
-            <div class="btns noPrint" style="margin-top:10px;">
-              <button type="button" onclick="clearSig('sigHCustomer')">Löschen</button>
-            </div>
-          </div>
-          <div class="sigBox">
-            <label>Übergabe – Unterschrift Vermieter *</label>
-            <canvas id="sigHStaff" class="sig"></canvas>
-            <div class="btns noPrint" style="margin-top:10px;">
-              <button type="button" onclick="clearSig('sigHStaff')">Löschen</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="bannerOk" id="handoverSignedBanner" style="display:none;">Übergabe ist unterschrieben.</div>
-      </div>
-    </section>
-
-    <!-- Rückgabe -->
-    <section id="paneR" class="card" style="display:none;">
-      <h2 class="sectionTitle">Rückgabe</h2>
-
-      <div class="bannerWarn" id="returnUnlockedInfo" style="display:none;">
-        Hinweis: Rückgabe ist auch ohne hinterlegte Übergabe-Unterschrift möglich (falls Übergabe-PDF bereits versendet wurde).
-      </div>
-
-      <div id="returnForm">
         <div class="row cols3">
           <div>
             <label>Datum *</label>
-            <input id="returnDate" type="date" required/>
+            <input id="handoverDate" type="date" required/>
           </div>
           <div>
             <label>Uhrzeit *</label>
-            <input id="returnTime" type="time" required/>
+            <input id="handoverTime" type="time" required/>
           </div>
           <div>
-            <label>Rückgabe durchgeführt von (Mitarbeiter)</label>
-            <input id="returnBy" type="text" placeholder="Name"/>
+            <label>Übergabe durchgeführt von (Mitarbeiter)</label>
+            <input id="handoverBy" type="text" placeholder="Name"/>
           </div>
         </div>
 
         <div class="row" style="margin-top:10px;">
           <div>
-            <label>Rückgabe-Hinweise / Besonderheiten (z.B. neue Schäden, fehlende Teile)</label>
-            <textarea id="returnNotes" placeholder="..."></textarea>
+            <label>Ausweis geprüft? *</label>
+            <select id="idChecked" required>
+              <option value=""></option>
+              <option value="ja">Ja</option>
+              <option value="nein">Nein</option>
+            </select>
           </div>
         </div>
 
-        <h3 class="sectionTitle" style="margin-top:14px;">Rückgabe-Checkliste</h3>
+        <h3 class="sectionTitle" style="margin-top:14px;">Ausweis – Fotos (nur lokal)</h3>
+        <div class="row cols2">
+          <div class="item">
+            <div class="itemTop">
+              <div class="itemTitle">Vorderseite</div>
+              <div class="itemMeta">
+                <button type="button" onclick="startCapture({type:'id', side:'front'})">Foto aufnehmen</button>
+                <button type="button" onclick="clearTargetPhoto({type:'id', side:'front'})">Löschen</button>
+              </div>
+            </div>
+            <div class="tiny" id="idFrontInfo"></div>
+            <img id="idFrontImg" class="photoThumb" alt="Ausweis Vorderseite"/>
+          </div>
+          <div class="item">
+            <div class="itemTop">
+              <div class="itemTitle">Rückseite</div>
+              <div class="itemMeta">
+                <button type="button" onclick="startCapture({type:'id', side:'back'})">Foto aufnehmen</button>
+                <button type="button" onclick="clearTargetPhoto({type:'id', side:'back'})">Löschen</button>
+              </div>
+            </div>
+            <div class="tiny" id="idBackInfo"></div>
+            <img id="idBackImg" class="photoThumb" alt="Ausweis Rückseite"/>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label>Übergabe-Hinweise / Besonderheiten *</label>
+            <textarea id="handoverNotes" required></textarea>
+          </div>
+        </div>
+
+        <h3 class="sectionTitle" style="margin-top:14px;">Übergabe-Checkliste</h3>
         <div class="tiny">Kategorien sind einzeln aufklappbar, erste Kategorie ist offen.</div>
-        <div id="returnChecklistWrap" style="margin-top:10px;"></div>
+        <div id="handoverChecklistWrap" style="margin-top:10px;"></div>
 
-        <div style="margin-top:14px;" id="returnEnd">
+        <div style="margin-top:14px;" id="handoverEnd">
           <h3 class="sectionTitle">Unterschriften (nur lokal)</h3>
-          <div id="returnSigLockMsg" class="tiny">Bitte erst alle Rückgabe-Punkte erledigen.</div>
+          <div id="handoverSigLockMsg" class="tiny">Bitte erst alle Übergabe-Punkte erledigen.</div>
 
-          <div class="row cols2" id="returnSigBox">
+          <div class="row cols2" id="handoverSigBox">
             <div class="sigBox">
-              <label>Rückgabe – Unterschrift Gast *</label>
-              <canvas id="sigRCustomer" class="sig"></canvas>
+              <label>Übergabe – Unterschrift Kunde *</label>
+              <canvas id="sigHCustomer" class="sig"></canvas>
               <div class="btns noPrint" style="margin-top:10px;">
-                <button type="button" onclick="clearSig('sigRCustomer')">Löschen</button>
+                <button type="button" onclick="clearSig('sigHCustomer')">Löschen</button>
               </div>
             </div>
             <div class="sigBox">
-              <label>Rückgabe – Unterschrift Vermieter *</label>
-              <canvas id="sigRStaff" class="sig"></canvas>
+              <label>Übergabe – Unterschrift Vermieter *</label>
+              <canvas id="sigHStaff" class="sig"></canvas>
               <div class="btns noPrint" style="margin-top:10px;">
-                <button type="button" onclick="clearSig('sigRStaff')">Löschen</button>
+                <button type="button" onclick="clearSig('sigHStaff')">Löschen</button>
               </div>
             </div>
           </div>
 
-          <div class="bannerOk" id="closedBanner" style="display:none;">Vorgang ist geschlossen (Rückgabe unterschrieben).</div>
+          <div class="bannerOk" id="handoverSignedBanner" style="display:none;">Übergabe ist unterschrieben.</div>
         </div>
-      </div>
+      </section>
+
+      <section id="paneR" class="card" style="margin-top:10px; display:none;">
+        <h2 class="sectionTitle">Rückgabe</h2>
+
+        <div class="bannerWarn" id="returnUnlockedInfo" style="display:none;">
+          Hinweis: Rückgabe ist auch ohne hinterlegte Übergabe-Unterschrift möglich (falls Übergabe-PDF bereits versendet wurde).
+        </div>
+
+        <div id="returnForm">
+          <div class="row cols3">
+            <div>
+              <label>Datum *</label>
+              <input id="returnDate" type="date" required/>
+            </div>
+            <div>
+              <label>Uhrzeit *</label>
+              <input id="returnTime" type="time" required/>
+            </div>
+            <div>
+              <label>Rückgabe durchgeführt von (Mitarbeiter)</label>
+              <input id="returnBy" type="text" placeholder="Name"/>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div>
+              <label>Rückgabe-Hinweise / Besonderheiten (z.B. neue Schäden, fehlende Teile)</label>
+              <textarea id="returnNotes" placeholder="..."></textarea>
+            </div>
+          </div>
+
+          <h3 class="sectionTitle" style="margin-top:14px;">Rückgabe-Checkliste</h3>
+          <div class="tiny">Kategorien sind einzeln aufklappbar, erste Kategorie ist offen.</div>
+          <div id="returnChecklistWrap" style="margin-top:10px;"></div>
+
+          <div style="margin-top:14px;" id="returnEnd">
+            <h3 class="sectionTitle">Unterschriften (nur lokal)</h3>
+            <div id="returnSigLockMsg" class="tiny">Bitte erst alle Rückgabe-Punkte erledigen.</div>
+
+            <div class="row cols2" id="returnSigBox">
+              <div class="sigBox">
+                <label>Rückgabe – Unterschrift Gast *</label>
+                <canvas id="sigRCustomer" class="sig"></canvas>
+                <div class="btns noPrint" style="margin-top:10px;">
+                  <button type="button" onclick="clearSig('sigRCustomer')">Löschen</button>
+                </div>
+              </div>
+              <div class="sigBox">
+                <label>Rückgabe – Unterschrift Vermieter *</label>
+                <canvas id="sigRStaff" class="sig"></canvas>
+                <div class="btns noPrint" style="margin-top:10px;">
+                  <button type="button" onclick="clearSig('sigRStaff')">Löschen</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="bannerOk" id="closedBanner" style="display:none;">Vorgang ist geschlossen (Rückgabe unterschrieben).</div>
+          </div>
+        </div>
+      </section>
     </section>
 
     <section class="card" style="margin-top:12px;">
@@ -572,7 +587,6 @@
     </section>
   </div>
 
-  <!-- Kamera Modal -->
   <div id="camModal" class="modal noPrint" role="dialog" aria-modal="true" aria-label="Kamera">
     <div class="modalCard">
       <div class="tiny" id="camTitle">Kamera</div>
@@ -586,7 +600,6 @@
     </div>
   </div>
 
-  <!-- iOS Fallback -->
   <div id="fileModal" class="modal noPrint" role="dialog" aria-modal="true" aria-label="Foto aufnehmen Fallback">
     <div class="modalCard">
       <div class="tiny" id="fileTitle">Kamera / Foto</div>
@@ -608,14 +621,8 @@
   </div>
 
 <script>
-/* Debug */
-const DEBUGSIG = true;
-function dlog(...a){ try{ if(DEBUGSIG) console.log(...a); }catch(e){} }
-
-/* Company footer text (wie dein preview-footer) */
-const COMPANY = {
-  name: "Warnow Moments"
-};
+/* Company footer text */
+const COMPANY = { name: "Warnow Moments" };
 const PDF_FOOTER_LINES = [
   `${COMPANY.name} | Geschäftsführer: C. Völz, J. Lindloff-Rühse | Steuernummer: i. G.`,
   `Sitz der Gesellschaft: Rostock | Registergericht: Amtsgericht Rostock | Handelsregisternummer: HRB i. G.`
@@ -627,15 +634,74 @@ const SUPABASE_ANON_KEY = "sb_publishable_cJyOwgz2NXfDiTj7mRUVrQ_VMAMoVdd";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const TABLE_PROTOCOLS = "protocols";
 
-/* UI Gate gegen Doppeltipp + Mehrfach-Downloads */
+/* Global state */
+let mainTab = "handover";
+let closedAt = null;
+let handoverItems = [];
+let returnItems = [];
+const photos = { id:{ front:{dataUrl:null,name:null}, back:{dataUrl:null,name:null} } };
+let camStream = null;
+let camFacing = "environment";
+let camTarget = null;
+let fallbackTarget = null;
+const sigPads = {};
+let recordIdLocked = false;
+
+/* Busy + Auth gate */
 let busy = false;
+let isAuthed = false;
 function setBusy(on){
   busy = !!on;
-  const ids = ["btnSaveH","btnSaveR","btnMail"];
-  ids.forEach(id=>{
+  ["btnSaveH","btnSaveR","btnMail"].forEach(id=>{
     const el = document.getElementById(id);
-    if(el) el.disabled = busy;
+    if(el) el.disabled = busy || !isAuthed;
   });
+}
+function setAuthState(authed, userEmail){
+  isAuthed = !!authed;
+
+  const status = document.getElementById("authStatus");
+  if(status){
+    status.textContent = isAuthed ? ("Eingeloggt" + (userEmail ? (" als " + userEmail) : "") + ".") : "Nicht eingeloggt.";
+  }
+
+  // Gate overlay
+  const gate = document.getElementById("gateOverlay");
+  if(gate){
+    gate.classList.toggle("show", !isAuthed);
+    gate.setAttribute("aria-hidden", String(!!isAuthed));
+  }
+
+  // Disable/enable all inputs in appArea
+  const area = document.getElementById("appArea");
+  if(area){
+    area.querySelectorAll("input, textarea, select, button").forEach(el=>{
+      // Buttons im Login-Card sollen natürlich aktiv bleiben, die sind nicht in appArea.
+      if(el.id === "loginEmail" || el.id === "loginPassword") return;
+      el.disabled = !isAuthed || busy;
+    });
+  }
+
+  // Topbar buttons
+  setBusy(busy);
+
+  // Saved list
+  if(!isAuthed){
+    const box = document.getElementById("savedList");
+    if(box) box.textContent = "Bitte einloggen.";
+  }else{
+    refreshSaved(); // still, ohne Popups
+  }
+}
+
+/* No-popup session check (Fallback) */
+async function hasSession(){
+  try{
+    const { data } = await sb.auth.getSession();
+    return !!data.session;
+  }catch(e){
+    return false;
+  }
 }
 
 /* Auth */
@@ -643,24 +709,20 @@ async function login(){
   const email = document.getElementById("loginEmail").value.trim();
   const password = document.getElementById("loginPassword").value;
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  const el = document.getElementById("authStatus");
-  if(error){ el.textContent = "Login fehlgeschlagen: " + error.message; return; }
-  el.textContent = "Eingeloggt als " + (data.user?.email || email);
+  if(error){
+    document.getElementById("authStatus").textContent = "Login fehlgeschlagen: " + error.message;
+    setAuthState(false);
+    return;
+  }
+  setAuthState(true, data.user?.email || email);
   await refreshSaved();
 }
 async function logout(){
   await sb.auth.signOut();
-  document.getElementById("authStatus").textContent = "Nicht eingeloggt.";
-  document.getElementById("savedList").textContent = "";
+  setAuthState(false);
 }
-async function requireLogin(){
-  const data = await sb.auth.getSession();
-  if(!data.session){
-    alert("Bitte zuerst einloggen (Team-Login).");
-    return false;
-  }
-  return true;
-}
+
+/* Network status */
 function setNetStatus(){
   const el = document.getElementById("netStatus");
   if(!el) return;
@@ -669,61 +731,10 @@ function setNetStatus(){
 window.addEventListener("online", setNetStatus);
 window.addEventListener("offline", setNetStatus);
 
-/* Checklisten Defaults */
-const HANDOVER_DEFAULT = [
-  { cat:"A. Identität / Rechtliches", code:"A1", text:"Identität mit Buchungsdaten abgeglichen.", requiresPhoto:false },
-  { cat:"A. Identität / Rechtliches", code:"A2", text:"Haftungsbestätigung / AGB bestätigt.", requiresPhoto:false },
-  { cat:"B. Sicherheits-Einweisung", code:"B1", text:"Schwimmwesten/Feuerlöscher gezeigt.", requiresPhoto:false },
-  { cat:"B. Sicherheits-Einweisung", code:"B2", text:"Anker erklärt.", requiresPhoto:false },
-  { cat:"C. Technik / Steuerung", code:"C1", text:"Motor/Steuerstand erklärt.", requiresPhoto:false },
-  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E1", text:"Zustandsfoto Bug.", requiresPhoto:true },
-  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E2", text:"Zustandsfoto Heck.", requiresPhoto:true },
-  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E3", text:"Zustandsfoto Steuerbord.", requiresPhoto:true },
-  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E4", text:"Zustandsfoto Backbord.", requiresPhoto:true },
-  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E5", text:"Zustandsfoto Innenraum.", requiresPhoto:true }
-];
-const RETURN_DEFAULT = [
-  { cat:"A. Technischer / äußerer Check", code:"A1", text:"Schadens-Scan Rumpf und Aufbau auf neue Kratzer/Dellen prüfen (Abgleich mit Fotos).", requiresPhoto:false },
-  { cat:"A. Technischer / äußerer Check", code:"A2", text:"Ausrüstung: Sind alle Fender und Leinen noch an Bord?", requiresPhoto:false },
-  { cat:"A. Technischer / äußerer Check", code:"A3", text:"Sicherheit: Schwimmwesten vollständig und Feuerlöscher unbenutzt/vorhanden?", requiresPhoto:false },
-  { cat:"B. Inventar-Kontrolle (Neu)", code:"B1", text:"Geschirr/Besteck-Set auf Vollständigkeit prüfen.", requiresPhoto:false },
-  { cat:"B. Inventar-Kontrolle (Neu)", code:"B2", text:"Lounge/Deko: Kissen vorhanden? Künstliche Pflanzen unbeschädigt?", requiresPhoto:false },
-  { cat:"C. Grill / Sauberkeit", code:"C1", text:"Grill-Check: Grob gereinigt, Gas abgedreht, Deckel geschlossen.", requiresPhoto:false },
-  { cat:"C. Grill / Sauberkeit", code:"C2", text:"Müll-Check: Abfälle durch den Gast entfernt.", requiresPhoto:false },
-  { cat:"C. Grill / Sauberkeit", code:"C3", text:"Besenreinheit: Allgemeiner Sauberkeitszustand (Oberflächen/Boden).", requiresPhoto:false },
-  { cat:"D. Abschluss", code:"D1", text:"Leergut/Zubehör zurückgenommen.", requiresPhoto:false },
-  { cat:"D. Abschluss", code:"D2", text:"Lost & Found: Blick in alle Ecken.", requiresPhoto:false },
-  { cat:"D. Abschluss", code:"D3", text:"Unterschrift: Digitale Bestätigung der Rückgabe.", requiresPhoto:false }
-];
-
-/* Lokale Speicherung (sensibel) */
-const LS_LOCAL_KEY = "wmaurora_sensitive_local_v146";
-
-/* State */
-let mainTab = "handover";
-let closedAt = null;
-let handoverItems = [];
-let returnItems = [];
-const photos = { id:{ front:{dataUrl:null,name:null}, back:{dataUrl:null,name:null} } };
-
-let camStream = null;
-let camFacing = "environment";
-let camTarget = null;
-let fallbackTarget = null;
-
-const sigPads = {};
-let recordIdLocked = false;
-
 /* Helpers */
 const pad2 = n => String(n).padStart(2,"0");
-function nowLocalDate(){
-  const d = new Date();
-  return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());
-}
-function nowLocalTime(){
-  const d = new Date();
-  return pad2(d.getHours())+":"+pad2(d.getMinutes());
-}
+function nowLocalDate(){ const d = new Date(); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
+function nowLocalTime(){ const d = new Date(); return pad2(d.getHours())+":"+pad2(d.getMinutes()); }
 function suggestRecordId(){
   const d = new Date();
   return "WM-"+d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate())+"-"+pad2(d.getHours())+pad2(d.getMinutes());
@@ -755,20 +766,41 @@ function isSecureCameraPossible(){
   return !!navigator.mediaDevices?.getUserMedia && window.isSecureContext;
 }
 
-/* Local map helpers */
-function getLocalMap(){
-  try{ return JSON.parse(localStorage.getItem(LS_LOCAL_KEY)) || {}; }
-  catch(e){ return {}; }
-}
-function setLocalMap(m){
-  try{ localStorage.setItem(LS_LOCAL_KEY, JSON.stringify(m)); }catch(e){}
-}
+/* Checklisten Defaults */
+const HANDOVER_DEFAULT = [
+  { cat:"A. Identität / Rechtliches", code:"A1", text:"Identität mit Buchungsdaten abgeglichen.", requiresPhoto:false },
+  { cat:"A. Identität / Rechtliches", code:"A2", text:"Haftungsbestätigung / AGB bestätigt.", requiresPhoto:false },
+  { cat:"B. Sicherheits-Einweisung", code:"B1", text:"Schwimmwesten/Feuerlöscher gezeigt.", requiresPhoto:false },
+  { cat:"B. Sicherheits-Einweisung", code:"B2", text:"Anker erklärt.", requiresPhoto:false },
+  { cat:"C. Technik / Steuerung", code:"C1", text:"Motor/Steuerstand erklärt.", requiresPhoto:false },
+  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E1", text:"Zustandsfoto Bug.", requiresPhoto:true },
+  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E2", text:"Zustandsfoto Heck.", requiresPhoto:true },
+  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E3", text:"Zustandsfoto Steuerbord.", requiresPhoto:true },
+  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E4", text:"Zustandsfoto Backbord.", requiresPhoto:true },
+  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E5", text:"Zustandsfoto Innenraum.", requiresPhoto:true }
+];
+const RETURN_DEFAULT = [
+  { cat:"A. Technischer / äußerer Check", code:"A1", text:"Schadens-Scan Rumpf und Aufbau auf neue Kratzer/Dellen prüfen (Abgleich mit Fotos).", requiresPhoto:false },
+  { cat:"A. Technischer / äußerer Check", code:"A2", text:"Ausrüstung: Sind alle Fender und Leinen noch an Bord?", requiresPhoto:false },
+  { cat:"A. Technischer / äußerer Check", code:"A3", text:"Sicherheit: Schwimmwesten vollständig und Feuerlöscher unbenutzt/vorhanden?", requiresPhoto:false },
+  { cat:"B. Inventar-Kontrolle (Neu)", code:"B1", text:"Geschirr/Besteck-Set auf Vollständigkeit prüfen.", requiresPhoto:false },
+  { cat:"B. Inventar-Kontrolle (Neu)", code:"B2", text:"Lounge/Deko: Kissen vorhanden? Künstliche Pflanzen unbeschädigt?", requiresPhoto:false },
+  { cat:"C. Grill / Sauberkeit", code:"C1", text:"Grill-Check: Grob gereinigt, Gas abgedreht, Deckel geschlossen.", requiresPhoto:false },
+  { cat:"C. Grill / Sauberkeit", code:"C2", text:"Müll-Check: Abfälle durch den Gast entfernt.", requiresPhoto:false },
+  { cat:"C. Grill / Sauberkeit", code:"C3", text:"Besenreinheit: Allgemeiner Sauberkeitszustand (Oberflächen/Boden).", requiresPhoto:false },
+  { cat:"D. Abschluss", code:"D1", text:"Leergut/Zubehör zurückgenommen.", requiresPhoto:false },
+  { cat:"D. Abschluss", code:"D2", text:"Lost & Found: Blick in alle Ecken.", requiresPhoto:false },
+  { cat:"D. Abschluss", code:"D3", text:"Unterschrift: Digitale Bestätigung der Rückgabe.", requiresPhoto:false }
+];
 
-/* recordId Lock wenn Übergabe-Signaturen existieren */
+/* Local sensitive storage */
+const LS_LOCAL_KEY = "wmaurora_sensitive_local_v147";
+function getLocalMap(){ try{ return JSON.parse(localStorage.getItem(LS_LOCAL_KEY)) || {}; }catch(e){ return {}; } }
+function setLocalMap(m){ try{ localStorage.setItem(LS_LOCAL_KEY, JSON.stringify(m)); }catch(e){} }
+
 function anyHandoverSigPresent(){
-  try{
-    return (!sigPads.sigHCustomer?.isEmpty?.() || !sigPads.sigHStaff?.isEmpty?.());
-  }catch(e){ return false; }
+  try{ return (!sigPads.sigHCustomer?.isEmpty?.() || !sigPads.sigHStaff?.isEmpty?.()); }
+  catch(e){ return false; }
 }
 function lockRecordIdIfNeeded(){
   if(recordIdLocked) return;
@@ -781,8 +813,6 @@ function lockRecordIdIfNeeded(){
     }
   }
 }
-
-/* Sensible Daten lokal speichern (Fotos + Signaturen) */
 function saveSensitiveLocal(){
   const recordId = document.getElementById("recordId").value.trim();
   if(!recordId) return;
@@ -804,8 +834,6 @@ function loadSensitiveLocal(recordId){
   const map = getLocalMap();
   return map[recordId] || null;
 }
-
-/* Canvas aus DataURL wiederherstellen */
 function drawDataUrlOnCanvas(canvasId, dataUrl){
   if(!dataUrl) return;
   const canvas = document.getElementById(canvasId);
@@ -822,7 +850,6 @@ function drawDataUrlOnCanvas(canvasId, dataUrl){
   };
   img.src = dataUrl;
 }
-
 function syncIdPhotoUI(doSave=true){
   const iF = document.getElementById("idFrontInfo");
   const iB = document.getElementById("idBackInfo");
@@ -854,7 +881,6 @@ function syncIdPhotoUI(doSave=true){
   if(doSave) saveSensitiveLocal();
   updatePhaseLocks();
 }
-
 function rehydrateLocalForCurrentRecord(){
   const recordId = document.getElementById("recordId").value.trim();
   if(!recordId) return;
@@ -885,20 +911,13 @@ function rehydrateNow(){
   try{ updateWorkflow(); updatePhaseLocks(); }catch(e){}
 }
 
-/* Checklist model */
+/* Checklist */
 function buildItems(phase, def){
   return def.map(d=>({
-    phase,
-    cat:d.cat,
-    catId: slug(d.cat),
-    code:d.code,
+    phase, cat:d.cat, catId: slug(d.cat), code:d.code,
     id: phase+"-"+slug(d.cat)+"-"+d.code.toLowerCase(),
-    text:d.text,
-    requiresPhoto: !!d.requiresPhoto,
-    done:false,
-    note:"",
-    photoDataUrl:null,
-    photoName:null
+    text:d.text, requiresPhoto:!!d.requiresPhoto,
+    done:false, note:"", photoDataUrl:null, photoName:null
   }));
 }
 function groupByCategory(items){
@@ -918,6 +937,7 @@ function findItem(phase, id){
   return list.find(x=>x.id===id);
 }
 function setItemDone(phase, id, val){
+  if(!isAuthed) return;
   const it = findItem(phase, id);
   if(!it) return;
   it.done = !!val;
@@ -926,6 +946,7 @@ function setItemDone(phase, id, val){
   maybeAutoOpenNextCategory(phase, it.catId);
 }
 function setItemNote(phase, id, val){
+  if(!isAuthed) return;
   const it = findItem(phase, id);
   if(!it) return;
   it.note = val;
@@ -999,7 +1020,6 @@ function renderChecklist(phase){
 function updateCategoryProgressUI(phase){
   const items = (phase==="handover") ? handoverItems : returnItems;
   const { order, map } = groupByCategory(items);
-
   order.forEach(catId=>{
     const cat = map.get(catId);
     const done = cat.items.filter(x=>x.done).length;
@@ -1017,12 +1037,10 @@ function updateCategoryProgressUI(phase){
 function maybeAutoOpenNextCategory(phase, catIdJustChanged){
   const items = (phase==="handover") ? handoverItems : returnItems;
   const { order, map } = groupByCategory(items);
-
   const cat = map.get(catIdJustChanged);
   if(!cat) return;
   const catDone = (cat.items.length>0 && cat.items.every(x=>x.done));
   if(!catDone) return;
-
   const idx = order.indexOf(catIdJustChanged);
   for(let i=idx+1;i<order.length;i++){
     const nextId = order[i];
@@ -1044,9 +1062,7 @@ function requiredPhotosOk(phase){
   const items = (phase==="handover") ? handoverItems : returnItems;
   return items.filter(x=>x.requiresPhoto).every(x=>!!x.photoDataUrl);
 }
-function phaseReadyForSign(phase){
-  return isChecklistComplete(phase) && requiredPhotosOk(phase);
-}
+function phaseReadyForSign(phase){ return isChecklistComplete(phase) && requiredPhotosOk(phase); }
 
 /* Signatures */
 function setupSignature(canvasId){
@@ -1058,7 +1074,6 @@ function setupSignature(canvasId){
     ctx.lineCap = "round";
     ctx.strokeStyle = "#0b2a3a";
   }
-
   function resize(keepDrawing=true){
     let snap = null;
     if(keepDrawing){
@@ -1068,18 +1083,15 @@ function setupSignature(canvasId){
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
     const newW = Math.max(1, Math.floor(rect.width * ratio));
     const newH = Math.max(1, Math.floor(rect.height * ratio));
-
     if(canvas.width === newW && canvas.height === newH){
       ctx.setTransform(ratio,0,0,ratio,0,0);
       applyPen();
       return;
     }
-
     canvas.width = newW;
     canvas.height = newH;
     ctx.setTransform(ratio,0,0,ratio,0,0);
     applyPen();
-
     if(snap){
       const img = new Image();
       img.onload = ()=>ctx.drawImage(img,0,0,rect.width,rect.height);
@@ -1097,8 +1109,9 @@ function setupSignature(canvasId){
   let drawing = false;
   let last = null;
 
-  function startAt(p){ drawing = true; last = p; }
+  function startAt(p){ if(!isAuthed) return; drawing = true; last = p; }
   function lineTo(p){
+    if(!isAuthed) return;
     if(!drawing) return;
     ctx.beginPath();
     ctx.moveTo(last.x,last.y);
@@ -1108,6 +1121,7 @@ function setupSignature(canvasId){
   }
   function end(){
     drawing = false; last = null;
+    if(!isAuthed) return;
     saveSensitiveLocal();
     updateWorkflow();
     updatePhaseLocks();
@@ -1148,19 +1162,17 @@ function setupSignature(canvasId){
   };
 }
 function clearSig(id){
+  if(!isAuthed) return;
   sigPads[id]?.clear();
   saveSensitiveLocal();
   updateWorkflow();
   updatePhaseLocks();
 }
 
-/* Workflow / Status */
-function handoverSigned(){
-  return !sigPads.sigHCustomer.isEmpty() && !sigPads.sigHStaff.isEmpty();
-}
-function returnSigned(){
-  return !sigPads.sigRCustomer.isEmpty() && !sigPads.sigRStaff.isEmpty();
-}
+/* Workflow */
+function handoverSigned(){ return !sigPads.sigHCustomer.isEmpty() && !sigPads.sigHStaff.isEmpty(); }
+function returnSigned(){ return !sigPads.sigRCustomer.isEmpty() && !sigPads.sigRStaff.isEmpty(); }
+
 function updateWorkflow(){
   const hint = document.getElementById("returnUnlockedInfo");
   if(hint) hint.style.display = (!handoverSigned()) ? "block" : "none";
@@ -1170,25 +1182,11 @@ function updateWorkflow(){
   document.getElementById("closedInfo").textContent = closedAt ? ("Geschlossen am " + new Date(closedAt).toLocaleString()) : "";
 
   const pill = document.getElementById("statePill");
-  if(closedAt){
-    pill.textContent = "Abgeschlossen";
-    pill.className = "pill ok";
-    return;
-  }
-  if(returnSigned()){
-    pill.textContent = "Rückgabe unterschrieben";
-    pill.className = "pill ok";
-    return;
-  }
-  if(handoverSigned()){
-    pill.textContent = "Übergabe unterschrieben";
-    pill.className = "pill ok";
-    return;
-  }
-  pill.textContent = "In Bearbeitung";
-  pill.className = "pill";
+  if(closedAt){ pill.textContent = "Abgeschlossen"; pill.className = "pill ok"; return; }
+  if(returnSigned()){ pill.textContent = "Rückgabe unterschrieben"; pill.className = "pill ok"; return; }
+  if(handoverSigned()){ pill.textContent = "Übergabe unterschrieben"; pill.className = "pill ok"; return; }
+  pill.textContent = "In Bearbeitung"; pill.className = "pill";
 }
-
 function updatePhaseLocks(){
   const hReady = phaseReadyForSign("handover");
   document.getElementById("handoverSigBox").classList.toggle("sigLocked", !hReady);
@@ -1207,6 +1205,7 @@ function updatePhaseLocks(){
 
 /* Tabs */
 function setMainTab(which){
+  if(!isAuthed) return;
   mainTab = which;
   document.getElementById("tabH").setAttribute("aria-selected", which==="handover");
   document.getElementById("tabR").setAttribute("aria-selected", which==="return");
@@ -1223,21 +1222,19 @@ function setMainTab(which){
   updatePhaseLocks();
 }
 function scrollToEnd(){
+  if(!isAuthed) return;
   const el = document.getElementById(mainTab==="handover" ? "handoverEnd" : "returnEnd");
   if(el) el.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
-/* Kamera / Foto */
+/* Camera */
 function openCamModal(title){
   document.getElementById("camTitle").textContent = title || "Kamera";
   document.getElementById("camModal").classList.add("show");
 }
 function closeCamModal(){ document.getElementById("camModal").classList.remove("show"); }
 function stopCamStream(){
-  if(camStream){
-    camStream.getTracks().forEach(t=>t.stop());
-    camStream = null;
-  }
+  if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream = null; }
   const v = document.getElementById("camVideo");
   if(v) v.srcObject = null;
 }
@@ -1267,6 +1264,7 @@ function closeFileModal(){
   fallbackTarget = null;
 }
 async function startCapture(target){
+  if(!isAuthed) return;
   camTarget = target;
 
   if(isSecureCameraPossible()){
@@ -1280,11 +1278,11 @@ async function startCapture(target){
       stopCamStream();
     }
   }
-
   fallbackTarget = target;
   openFileModal(targetLabel(target));
 }
 async function switchCam(){
+  if(!isAuthed) return;
   camFacing = (camFacing==="environment") ? "user" : "environment";
   await startCamStream();
 }
@@ -1308,6 +1306,7 @@ function setTargetPhoto(target, dataUrl, name){
   }
 }
 function clearTargetPhoto(target){
+  if(!isAuthed) return;
   if(target.type==="id"){
     photos.id[target.side].dataUrl = null;
     photos.id[target.side].name = null;
@@ -1327,6 +1326,7 @@ function clearTargetPhoto(target){
   }
 }
 function captureCam(){
+  if(!isAuthed) return;
   const v = document.getElementById("camVideo");
   const c = document.getElementById("camCanvas");
   if(!camTarget) return;
@@ -1354,6 +1354,7 @@ function closeCam(){
   camTarget = null;
 }
 document.getElementById("fallbackFile").addEventListener("change", async (e)=>{
+  if(!isAuthed) { e.target.value=""; return; }
   const file = e.target.files?.[0];
   e.target.value = "";
   if(!file || !fallbackTarget) return;
@@ -1384,39 +1385,28 @@ function validatePhase(phase){
   if(!requireBaseFields()) return { ok:false, missing:["Bitte Stammdaten vervollständigen."] };
 
   const missing = [];
-
   if(phase==="handover"){
-    const ids = ["handoverDate","handoverTime","idChecked","handoverNotes"];
-    for(const id of ids){
+    ["handoverDate","handoverTime","idChecked","handoverNotes"].forEach(id=>{
       const el = document.getElementById(id);
-      if(!el.checkValidity()){
-        el.reportValidity();
-        return { ok:false, missing:["Bitte Pflichtfelder in der Übergabe ausfüllen."] };
-      }
-    }
+      if(!el.checkValidity()){ el.reportValidity(); missing.push("Bitte Pflichtfelder in der Übergabe ausfüllen."); }
+    });
     if(!phaseReadyForSign("handover")) missing.push("Übergabe: Checkliste/Pflichtfotos noch nicht vollständig.");
     if(sigPads.sigHCustomer.isEmpty()) missing.push("Übergabe: Unterschrift Kunde fehlt.");
     if(sigPads.sigHStaff.isEmpty()) missing.push("Übergabe: Unterschrift Vermieter fehlt.");
   }
-
   if(phase==="return"){
-    const ids = ["returnDate","returnTime"];
-    for(const id of ids){
+    ["returnDate","returnTime"].forEach(id=>{
       const el = document.getElementById(id);
-      if(!el.checkValidity()){
-        el.reportValidity();
-        return { ok:false, missing:["Bitte Pflichtfelder in der Rückgabe ausfüllen."] };
-      }
-    }
+      if(!el.checkValidity()){ el.reportValidity(); missing.push("Bitte Pflichtfelder in der Rückgabe ausfüllen."); }
+    });
     if(!phaseReadyForSign("return")) missing.push("Rückgabe: Checkliste/Pflichtfotos noch nicht vollständig.");
     if(sigPads.sigRCustomer.isEmpty()) missing.push("Rückgabe: Unterschrift Gast fehlt.");
     if(sigPads.sigRStaff.isEmpty()) missing.push("Rückgabe: Unterschrift Vermieter fehlt.");
   }
-
   return { ok: missing.length===0, missing };
 }
 
-/* Zentraler Datensatz OHNE Kundendaten/Ausweis/Signaturen */
+/* Central record */
 function collectCentralRecord(){
   const recordid = document.getElementById("recordId").value.trim();
   const bookingref = document.getElementById("bookingRef").value.trim();
@@ -1439,81 +1429,53 @@ function collectCentralRecord(){
     checklist: returnItems
   };
 
-  return {
-    recordid,
-    bookingref,
-    resourceid,
-    status: closedAt ? "closed" : "open",
-    handover,
-    return: ret,
-    updatedat: new Date().toISOString()
-  };
+  return { recordid, bookingref, resourceid, status: closedAt ? "closed" : "open", handover, return: ret, updatedat: new Date().toISOString() };
 }
 async function upsertCentralRecord(){
-  if(!await requireLogin()) return false;
+  if(!isAuthed) return false;
   const rec = collectCentralRecord();
-  if(!rec.recordid){
-    alert("Vorgangsnummer (recordId) fehlt.");
-    return false;
-  }
+  if(!rec.recordid) return false;
   const { error } = await sb.from(TABLE_PROTOCOLS).upsert(rec, { onConflict:"recordid" });
-  if(error){
-    alert("Speichern fehlgeschlagen: " + error.message);
-    return false;
-  }
+  if(error){ alert("Speichern fehlgeschlagen: " + error.message); return false; }
   return true;
 }
 async function loadCentralRecord(recordId){
-  if(!await requireLogin()) return null;
+  if(!isAuthed) return null;
   const { data, error } = await sb.from(TABLE_PROTOCOLS).select("*").eq("recordid", recordId).maybeSingle();
-  if(error){
-    alert("Laden fehlgeschlagen: " + error.message);
-    return null;
-  }
+  if(error){ alert("Laden fehlgeschlagen: " + error.message); return null; }
   return data;
 }
 
-/* Save / Load UI */
+/* Save / Load */
 async function savePhase(phase){
-  if(busy) return;
+  if(!isAuthed || busy) return;
   setBusy(true);
   try{
     rehydrateNow();
-
     const v = validatePhase(phase);
     if(!v.ok){
       alert("Bitte ergänzen:\n- " + v.missing.join("\n- "));
       return;
     }
 
-    if(phase==="return"){
-      closedAt = new Date().toISOString();
-    }
-
+    if(phase==="return") closedAt = new Date().toISOString();
     saveSensitiveLocal();
 
     let centralOk = true;
-    try{ centralOk = await upsertCentralRecord(); }
-    catch(e){ centralOk = false; }
-
+    try{ centralOk = await upsertCentralRecord(); }catch(e){ centralOk = false; }
     if(centralOk) await refreshSaved();
 
     updateWorkflow();
     updatePhaseLocks();
 
-    if(phase==="handover"){
-      await offerPdfDownloadOrShare("handover");
-      return;
-    }
-
+    if(phase==="handover"){ await offerPdfDownloadOrShare("handover"); return; }
     await openEmailDraft("return", { force:true });
   } finally {
     setBusy(false);
   }
 }
-
 async function refreshSaved(){
-  if(!await requireLogin()) return;
+  if(!isAuthed) return;
   const { data, error } = await sb
     .from(TABLE_PROTOCOLS)
     .select("recordid, bookingref, resourceid, status, updatedat, createdat")
@@ -1536,8 +1498,8 @@ async function refreshSaved(){
     `;
   }).join("");
 }
-
 async function openRecord(recordId){
+  if(!isAuthed) return;
   const central = await loadCentralRecord(recordId);
   if(!central){ alert("Nicht gefunden (recordId)."); return; }
 
@@ -1563,27 +1525,19 @@ async function openRecord(recordId){
   closedAt = (central.status==="closed") ? (central.updatedat || new Date().toISOString()) : null;
 
   const local = loadSensitiveLocal(recordId);
-
-  sigPads.sigHCustomer.clear();
-  sigPads.sigHStaff.clear();
-  sigPads.sigRCustomer.clear();
-  sigPads.sigRStaff.clear();
+  sigPads.sigHCustomer.clear(); sigPads.sigHStaff.clear(); sigPads.sigRCustomer.clear(); sigPads.sigRStaff.clear();
 
   if(local){
     document.getElementById("customerName").value = local.customerName || "";
     document.getElementById("customerEmail").value = local.customerEmail || "";
-
     photos.id.front = local.idFront || {dataUrl:null,name:null};
     photos.id.back  = local.idBack  || {dataUrl:null,name:null};
     syncIdPhotoUI(false);
-
     drawDataUrlOnCanvas("sigHCustomer", local.sigHCustomer);
     drawDataUrlOnCanvas("sigHStaff", local.sigHStaff);
     drawDataUrlOnCanvas("sigRCustomer", local.sigRCustomer);
     drawDataUrlOnCanvas("sigRStaff", local.sigRStaff);
   }else{
-    document.getElementById("customerName").value = "";
-    document.getElementById("customerEmail").value = "";
     photos.id.front = {dataUrl:null,name:null};
     photos.id.back  = {dataUrl:null,name:null};
     syncIdPhotoUI(false);
@@ -1591,14 +1545,12 @@ async function openRecord(recordId){
 
   renderChecklist("handover");
   renderChecklist("return");
-
   updateWorkflow();
   updatePhaseLocks();
   requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
 }
-
 async function clearSaved(){
-  if(!await requireLogin()) return;
+  if(!isAuthed) return;
   const ok = confirm("Wirklich ALLE zentral gespeicherten Vorgänge löschen?");
   if(!ok) return;
   const { error } = await sb.from(TABLE_PROTOCOLS).delete().neq("recordid","");
@@ -1608,6 +1560,7 @@ async function clearSaved(){
 
 /* Reset */
 function resetAll(){
+  if(!isAuthed) return;
   closedAt = null;
   recordIdLocked = false;
   const ridEl = document.getElementById("recordId");
@@ -1651,10 +1604,8 @@ function resetAll(){
   updatePhaseLocks();
 }
 
-/* Email/PDF helpers */
-function mailSubject(){
-  return document.getElementById("bookingRef").value.trim();
-}
+/* PDF + Mail (gleich wie vorher – kompakt) */
+function mailSubject(){ return document.getElementById("bookingRef").value.trim(); }
 function mailBody(phase){
   const rid = document.getElementById("recordId").value.trim();
   const raft = document.getElementById("raftId").value.trim();
@@ -1670,14 +1621,8 @@ function mailBody(phase){
     "Im Anhang finden Sie das vollständige Protokoll als PDF."
   ].join("\n");
 }
-function showPdfOverlay(on){
-  document.getElementById("pdfLoadingOverlay").classList.toggle("show", !!on);
-}
-function guessImageFormat(dataUrl){
-  if(!dataUrl) return null;
-  if(String(dataUrl).startsWith("data:image/png")) return "PNG";
-  return "JPEG";
-}
+function showPdfOverlay(on){ document.getElementById("pdfLoadingOverlay").classList.toggle("show", !!on); }
+function guessImageFormat(dataUrl){ if(!dataUrl) return null; if(String(dataUrl).startsWith("data:image/png")) return "PNG"; return "JPEG"; }
 function getImageSize(dataUrl){
   return new Promise((res,rej)=>{
     const img = new Image();
@@ -1690,20 +1635,13 @@ async function addImageContain(pdf, dataUrl, format, x, y, boxW, boxH){
   if(!dataUrl) return false;
   try{
     const { w, h } = await getImageSize(dataUrl);
-    if(!w || !h) return false;
     const scale = Math.min(boxW / w, boxH / h);
-    const drawW = w * scale;
-    const drawH = h * scale;
-    const dx = x + (boxW - drawW)/2;
-    const dy = y + (boxH - drawH)/2;
+    const drawW = w * scale, drawH = h * scale;
+    const dx = x + (boxW - drawW)/2, dy = y + (boxH - drawH)/2;
     pdf.addImage(dataUrl, format, dx, dy, drawW, drawH);
     return true;
-  }catch(e){
-    return false;
-  }
+  }catch(e){ return false; }
 }
-
-/* PDF Footer on every page */
 function addPdfFooter(pdf){
   try{
     const pageCount = pdf.getNumberOfPages();
@@ -1718,14 +1656,8 @@ function addPdfFooter(pdf){
     }
   }catch(e){}
 }
-
-/* PDF generation incl. required meta fields */
 async function generatePdfBlob(phase){
-  if(!window.jspdf?.jsPDF){
-    alert("PDF-Bibliothek (jsPDF) konnte nicht geladen werden.");
-    return null;
-  }
-
+  if(!window.jspdf?.jsPDF){ alert("PDF-Bibliothek (jsPDF) konnte nicht geladen werden."); return null; }
   showPdfOverlay(true);
   try{
     const jsPDF = window.jspdf.jsPDF;
@@ -1757,7 +1689,6 @@ async function generatePdfBlob(phase){
     pdf.setFont(undefined, "normal");
     pdf.setTextColor(11,18,32);
 
-    // Kopfblock: IMMER mit Kunde + Datum/Uhrzeit + Rückgabe durchgeführt von
     pdf.text("Buchungsreferenz: " + bookingRef, 20, y); y += 6;
     pdf.text("Vorgang: " + recordId, 20, y); y += 6;
     pdf.text("Floß: " + raftId, 20, y); y += 6;
@@ -1770,35 +1701,26 @@ async function generatePdfBlob(phase){
       pdf.text("Rückgabe Datum/Uhrzeit: " + (returnDate || "-") + " " + (returnTime || ""), 20, y); y += 6;
       pdf.text("Rückgabe durchgeführt von: " + (returnBy || "-"), 20, y); y += 6;
     }
-
-    // Zusätzlich: Rückgabe durchgeführt von (MIT AUFNEHMEN in beiden PDFs)
     pdf.text("Rückgabe durchgeführt von: " + (returnBy || "-"), 20, y); y += 8;
 
-    pdf.setFont(undefined, "bold");
-    pdf.setTextColor(11,42,58);
+    pdf.setFont(undefined, "bold"); pdf.setTextColor(11,42,58);
     pdf.text("Hinweise", 20, y); y += 6;
 
-    pdf.setFont(undefined, "normal");
-    pdf.setTextColor(11,18,32);
-    const notes = (phase==="handover")
-      ? document.getElementById("handoverNotes").value.trim()
-      : document.getElementById("returnNotes").value.trim();
+    pdf.setFont(undefined, "normal"); pdf.setTextColor(11,18,32);
+    const notes = (phase==="handover") ? document.getElementById("handoverNotes").value.trim() : document.getElementById("returnNotes").value.trim();
     const noteLines = pdf.splitTextToSize(notes || "-", 170);
     pdf.text(noteLines, 20, y);
     y += Math.min(60, noteLines.length * 5 + 6);
 
     if(phase==="handover"){
       if(y > 230){ pdf.addPage(); y = 16; }
-      pdf.setFont(undefined, "bold");
-      pdf.setTextColor(11,42,58);
+      pdf.setFont(undefined, "bold"); pdf.setTextColor(11,42,58);
       pdf.text("Ausweis-Fotos (lokal)", 20, y); y += 6;
 
-      pdf.setFont(undefined, "normal");
-      pdf.setTextColor(11,18,32);
+      pdf.setFont(undefined, "normal"); pdf.setTextColor(11,18,32);
       const fmtF = guessImageFormat(photos.id.front.dataUrl) || "JPEG";
       const fmtB = guessImageFormat(photos.id.back.dataUrl) || "JPEG";
-      const boxW = 80, boxH = 50;
-      const x1 = 20, x2 = 110;
+      const boxW = 80, boxH = 50, x1 = 20, x2 = 110;
 
       pdf.text("Vorderseite", x1, y);
       pdf.text("Rückseite", x2, y);
@@ -1809,12 +1731,10 @@ async function generatePdfBlob(phase){
       y += boxH + 8;
     }
 
-    pdf.setFont(undefined, "bold");
-    pdf.setTextColor(11,42,58);
+    pdf.setFont(undefined, "bold"); pdf.setTextColor(11,42,58);
     pdf.text("Checkliste", 20, y); y += 6;
 
-    pdf.setFont(undefined, "normal");
-    pdf.setTextColor(11,18,32);
+    pdf.setFont(undefined, "normal"); pdf.setTextColor(11,18,32);
     const items = (phase==="handover") ? handoverItems : returnItems;
     const doneCount = items.filter(ii=>ii.done).length;
     pdf.text("Erledigt: " + doneCount + "/" + items.length, 20, y); y += 6;
@@ -1849,15 +1769,11 @@ async function generatePdfBlob(phase){
     }
 
     if(y > 240){ pdf.addPage(); y = 16; }
-    pdf.setFont(undefined, "bold");
-    pdf.setTextColor(11,42,58);
+    pdf.setFont(undefined, "bold"); pdf.setTextColor(11,42,58);
     pdf.text("Unterschriften (lokal)", 20, y); y += 6;
 
-    pdf.setFont(undefined, "normal");
-    pdf.setTextColor(11,18,32);
-
-    const sigW = 80, sigH = 35;
-    const sig1x = 20, sig2x = 110;
+    pdf.setFont(undefined, "normal"); pdf.setTextColor(11,18,32);
+    const sigW = 80, sigH = 35, sig1x = 20, sig2x = 110;
 
     let s1=null, s2=null, s3=null, s4=null;
     try{ s1 = sigPads.sigHCustomer.isEmpty() ? null : sigPads.sigHCustomer.dataUrl(); }catch(e){}
@@ -1877,7 +1793,6 @@ async function generatePdfBlob(phase){
     y += 4;
     if(s3) await addImageContain(pdf, s3, "PNG", sig1x, y, sigW, sigH);
     if(s4) await addImageContain(pdf, s4, "PNG", sig2x, y, sigW, sigH);
-    y += sigH + 6;
 
     addPdfFooter(pdf);
     return pdf.output("blob");
@@ -1885,8 +1800,6 @@ async function generatePdfBlob(phase){
     showPdfOverlay(false);
   }
 }
-
-/* Download/Share – ohne Doppel-Aktionen */
 async function offerPdfDownloadOrShare(phase){
   const blob = await generatePdfBlob(phase);
   if(!blob) return;
@@ -1897,62 +1810,40 @@ async function offerPdfDownloadOrShare(phase){
 
   const canShareFiles = !!navigator.canShare && navigator.canShare({ files:[file] });
   if(canShareFiles){
-    try{
-      await navigator.share({ files:[file], title: subject, text: "PDF-Protokoll" });
-      return; // wichtig: kein zusätzlicher Download
-    }catch(e){
-      // wenn Share abgebrochen: nichts weiter tun (kein Download-Spam)
-      return;
-    }
+    try{ await navigator.share({ files:[file], title: subject, text: "PDF-Protokoll" }); }
+    catch(e){}
+    return;
   }
-
-  // Fallback Download (einmal)
   try{
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = safeName;
+    a.href = url; a.download = safeName;
     document.body.appendChild(a);
-    a.click();
-    a.remove();
+    a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1500);
   }catch(e){}
 }
-
-/* Mailen (+ PDF) – nur wenn Übergabe ODER Rückgabe unterschrieben */
 async function openEmailDraft(phase, opts={}){
-  if(busy) return;
+  if(!isAuthed || busy) return;
   setBusy(true);
   try{
-    try{ saveSensitiveLocal(); }catch(e){}
-    try{ rehydrateNow(); }catch(e){}
+    saveSensitiveLocal();
+    rehydrateNow();
 
     const allow = handoverSigned() || returnSigned();
-    if(!allow && !opts.force){
-      alert("Mailen ist nur möglich, wenn entweder die Übergabe oder die Rückgabe unterschrieben ist.");
-      return;
-    }
+    if(!allow && !opts.force) return;
 
     const to = document.getElementById("customerEmail").value.trim();
-    if(!to){
-      alert("Bitte E-Mail des Kunden eintragen.");
-      document.getElementById("customerEmail").focus();
-      return;
-    }
+    if(!to){ document.getElementById("customerEmail").reportValidity(); return; }
 
     const subject = mailSubject();
-    if(!subject){
-      alert("Bitte Buchungsreferenz eintragen (für Betreff).");
-      document.getElementById("bookingRef").focus();
-      return;
-    }
+    if(!subject){ document.getElementById("bookingRef").reportValidity(); return; }
 
     const body = mailBody(phase);
     const blob = await generatePdfBlob(phase);
 
     if(!blob){
-      const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.location.href = mailtoUrl;
+      window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       return;
     }
 
@@ -1961,28 +1852,18 @@ async function openEmailDraft(phase, opts={}){
     const canShareFiles = !!navigator.canShare && navigator.canShare({ files:[file] });
 
     if(canShareFiles){
-      try{
-        await navigator.share({ files:[file], title: subject, text: body });
-        return;
-      }catch(e){
-        // Abbruch = ok, kein weiterer Spam
-        return;
-      }
+      try{ await navigator.share({ files:[file], title: subject, text: body }); }catch(e){}
+      return;
     }
 
-    // Fallback: mailto + optional EINMAL download
-    const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nHinweis: PDF-Anhang bitte aus Download/Dateien manuell anhängen.")}`;
-    window.location.href = mailtoUrl;
-
+    window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nHinweis: PDF bitte manuell anhängen.")}`;
     setTimeout(()=>{
       try{
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
-        a.download = safeName;
+        a.href = url; a.download = safeName;
         document.body.appendChild(a);
-        a.click();
-        a.remove();
+        a.click(); a.remove();
         setTimeout(()=>URL.revokeObjectURL(url),1500);
       }catch(e){}
     }, 800);
@@ -1990,8 +1871,6 @@ async function openEmailDraft(phase, opts={}){
     setBusy(false);
   }
 }
-
-/* Share Status UI */
 function updateShareStatus(){
   const el = document.getElementById("shareStatus");
   if(!el) return;
@@ -2030,6 +1909,24 @@ async function init(){
   updatePhaseLocks();
   updateShareStatus();
 
+  // Auth state listener (entscheidend gegen „Session kurz null“)
+  sb.auth.onAuthStateChange((event, session)=>{
+    if(session?.user){
+      setAuthState(true, session.user.email);
+    }else{
+      setAuthState(false);
+    }
+  });
+
+  // Initial auth sync – ohne Popup
+  const ok = await hasSession();
+  if(ok){
+    const { data } = await sb.auth.getUser();
+    setAuthState(true, data.user?.email);
+  }else{
+    setAuthState(false);
+  }
+
   window.addEventListener("pageshow", ()=>requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow)));
   window.addEventListener("pagehide", ()=>{ try{ saveSensitiveLocal(); }catch(e){} });
   window.addEventListener("focus", ()=>requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow)));
@@ -2039,16 +1936,8 @@ async function init(){
 
   const ridEl = document.getElementById("recordId");
   ridEl.addEventListener("input", ()=>{
-    if(recordIdLocked){
-      ridEl.value = ridEl.value;
-    }
+    if(recordIdLocked) ridEl.value = ridEl.value;
   });
-
-  const data = await sb.auth.getSession();
-  if(data.session){
-    document.getElementById("authStatus").textContent = "Eingeloggt.";
-    await refreshSaved();
-  }
 }
 
 init();
