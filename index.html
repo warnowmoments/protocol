@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-  <title>Warnow Moments Übergabe Rückgabe – Aurora v14.5</title>
+  <title>Warnow Moments Übergabe Rückgabe – Aurora v14.6</title>
 
   <!-- PDF: jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -109,6 +109,11 @@
       background:transparent;
       border-color:var(--line);
     }
+    button[disabled]{
+      opacity:.6;
+      cursor:not-allowed;
+    }
+
     .tiny{ font-size:12px; color:var(--muted); }
     .pill{
       display:inline-block;
@@ -316,14 +321,14 @@
         <img id="brandLogoImg" alt="Warnow Moments Logo" style="display:none"/>
         <div class="brandTitle">
           <h1>Übergabe & Rückgabe – Floß „Aurora“</h1>
-          <div class="sub">v14.5 · iPad fixes · Kundendaten/Ausweis/Signaturen nur lokal</div>
+          <div class="sub">v14.6 · weniger Popups · Anti-Doppelklick · PDF-Footer</div>
         </div>
       </div>
 
       <div class="btns">
-        <button class="primary" type="button" onclick="savePhase('handover')">Übergabe speichern</button>
-        <button class="primary" type="button" onclick="savePhase('return')">Vorgang abschließen</button>
-        <button class="wm" type="button" onclick="openEmailDraft(mainTab)">Mailen (+ PDF)</button>
+        <button class="primary" id="btnSaveH" type="button" onclick="savePhase('handover')">Übergabe speichern</button>
+        <button class="primary" id="btnSaveR" type="button" onclick="savePhase('return')">Vorgang abschließen</button>
+        <button class="wm" id="btnMail" type="button" onclick="openEmailDraft(mainTab)">Mailen (+ PDF)</button>
         <button type="button" onclick="window.print()">Drucken</button>
         <button class="danger" type="button" onclick="resetAll()">Neu</button>
       </div>
@@ -607,11 +612,31 @@
 const DEBUGSIG = true;
 function dlog(...a){ try{ if(DEBUGSIG) console.log(...a); }catch(e){} }
 
+/* Company footer text (wie dein preview-footer) */
+const COMPANY = {
+  name: "Warnow Moments"
+};
+const PDF_FOOTER_LINES = [
+  `${COMPANY.name} | Geschäftsführer: C. Völz, J. Lindloff-Rühse | Steuernummer: i. G.`,
+  `Sitz der Gesellschaft: Rostock | Registergericht: Amtsgericht Rostock | Handelsregisternummer: HRB i. G.`
+];
+
 /* Supabase */
 const SUPABASE_URL = "https://fnktiyujyznbbhwkeyww.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_cJyOwgz2NXfDiTj7mRUVrQ_VMAMoVdd";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const TABLE_PROTOCOLS = "protocols";
+
+/* UI Gate gegen Doppeltipp + Mehrfach-Downloads */
+let busy = false;
+function setBusy(on){
+  busy = !!on;
+  const ids = ["btnSaveH","btnSaveR","btnMail"];
+  ids.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.disabled = busy;
+  });
+}
 
 /* Auth */
 async function login(){
@@ -657,7 +682,6 @@ const HANDOVER_DEFAULT = [
   { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E4", text:"Zustandsfoto Backbord.", requiresPhoto:true },
   { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E5", text:"Zustandsfoto Innenraum.", requiresPhoto:true }
 ];
-
 const RETURN_DEFAULT = [
   { cat:"A. Technischer / äußerer Check", code:"A1", text:"Schadens-Scan Rumpf und Aufbau auf neue Kratzer/Dellen prüfen (Abgleich mit Fotos).", requiresPhoto:false },
   { cat:"A. Technischer / äußerer Check", code:"A2", text:"Ausrüstung: Sind alle Fender und Leinen noch an Bord?", requiresPhoto:false },
@@ -673,7 +697,7 @@ const RETURN_DEFAULT = [
 ];
 
 /* Lokale Speicherung (sensibel) */
-const LS_LOCAL_KEY = "wmaurora_sensitive_local_v145";
+const LS_LOCAL_KEY = "wmaurora_sensitive_local_v146";
 
 /* State */
 let mainTab = "handover";
@@ -1058,9 +1082,7 @@ function setupSignature(canvasId){
 
     if(snap){
       const img = new Image();
-      img.onload = ()=>{
-        ctx.drawImage(img,0,0,rect.width,rect.height);
-      };
+      img.onload = ()=>ctx.drawImage(img,0,0,rect.width,rect.height);
       img.src = snap;
     }
   }
@@ -1140,7 +1162,6 @@ function returnSigned(){
   return !sigPads.sigRCustomer.isEmpty() && !sigPads.sigRStaff.isEmpty();
 }
 function updateWorkflow(){
-  // Rückgabe ist NICHT mehr gesperrt.
   const hint = document.getElementById("returnUnlockedInfo");
   if(hint) hint.style.display = (!handoverSigned()) ? "block" : "none";
 
@@ -1169,14 +1190,12 @@ function updateWorkflow(){
 }
 
 function updatePhaseLocks(){
-  // Übergabe: Signatur nur wenn Checkliste/Fotos fertig
   const hReady = phaseReadyForSign("handover");
   document.getElementById("handoverSigBox").classList.toggle("sigLocked", !hReady);
   document.getElementById("handoverSigLockMsg").textContent = hReady
     ? "Checkliste vollständig – bitte jetzt unterschreiben."
     : "Bitte erst Übergabe-Checkliste vollständig erledigen (inkl. Pflichtfotos), dann unterschreiben.";
 
-  // Rückgabe: Signatur nur wenn Rückgabe-Checkliste/Fotos fertig (ohne Übergabe-Abhängigkeit)
   const rReady = phaseReadyForSign("return");
   document.getElementById("returnSigBox").classList.toggle("sigLocked", !rReady);
   document.getElementById("returnSigLockMsg").textContent = rReady
@@ -1360,7 +1379,6 @@ function requireBaseFields(){
   }
   return true;
 }
-
 function validatePhase(phase){
   if(closedAt) return { ok:false, missing:["Vorgang ist geschlossen."] };
   if(!requireBaseFields()) return { ok:false, missing:["Bitte Stammdaten vervollständigen."] };
@@ -1377,7 +1395,6 @@ function validatePhase(phase){
       }
     }
     if(!phaseReadyForSign("handover")) missing.push("Übergabe: Checkliste/Pflichtfotos noch nicht vollständig.");
-    // NEU: Übergabe speichern NUR mit Unterschrift (beide)
     if(sigPads.sigHCustomer.isEmpty()) missing.push("Übergabe: Unterschrift Kunde fehlt.");
     if(sigPads.sigHStaff.isEmpty()) missing.push("Übergabe: Unterschrift Vermieter fehlt.");
   }
@@ -1392,7 +1409,6 @@ function validatePhase(phase){
       }
     }
     if(!phaseReadyForSign("return")) missing.push("Rückgabe: Checkliste/Pflichtfotos noch nicht vollständig.");
-    // NEU: Vorgang abschließen NUR mit Rückgabe-Unterschrift (beide)
     if(sigPads.sigRCustomer.isEmpty()) missing.push("Rückgabe: Unterschrift Gast fehlt.");
     if(sigPads.sigRStaff.isEmpty()) missing.push("Rückgabe: Unterschrift Vermieter fehlt.");
   }
@@ -1459,41 +1475,41 @@ async function loadCentralRecord(recordId){
 
 /* Save / Load UI */
 async function savePhase(phase){
-  rehydrateNow();
+  if(busy) return;
+  setBusy(true);
+  try{
+    rehydrateNow();
 
-  const v = validatePhase(phase);
-  if(!v.ok){
-    alert("Bitte ergänzen:\n- " + v.missing.join("\n- "));
-    return;
+    const v = validatePhase(phase);
+    if(!v.ok){
+      alert("Bitte ergänzen:\n- " + v.missing.join("\n- "));
+      return;
+    }
+
+    if(phase==="return"){
+      closedAt = new Date().toISOString();
+    }
+
+    saveSensitiveLocal();
+
+    let centralOk = true;
+    try{ centralOk = await upsertCentralRecord(); }
+    catch(e){ centralOk = false; }
+
+    if(centralOk) await refreshSaved();
+
+    updateWorkflow();
+    updatePhaseLocks();
+
+    if(phase==="handover"){
+      await offerPdfDownloadOrShare("handover");
+      return;
+    }
+
+    await openEmailDraft("return", { force:true });
+  } finally {
+    setBusy(false);
   }
-
-  // Speichern + Status
-  if(phase==="return"){
-    closedAt = new Date().toISOString(); // Vorgang abschließen = closed
-  }
-
-  saveSensitiveLocal();
-
-  let centralOk = true;
-  try{ centralOk = await upsertCentralRecord(); }
-  catch(e){ centralOk = false; }
-
-  if(centralOk) await refreshSaved();
-  else alert("Hinweis: Zentral speichern ging gerade nicht. PDF/Mail ist trotzdem möglich.");
-
-  updateWorkflow();
-  updatePhaseLocks();
-
-  if(phase==="handover"){
-    // NEU: Übergabe speichern erstellt PDF (damit man es direkt weitergeben/versenden kann), aber öffnet keine Mail.
-    await offerPdfDownloadOrShare("handover");
-    alert("Übergabe gespeichert (mit Unterschriften).");
-    return;
-  }
-
-  // phase==="return" => Vorgang abschließen: PDF + Mail öffnen
-  await openEmailDraft("return", { force:true }); // force: trotz Tab
-  alert("Vorgang abgeschlossen (Rückgabe unterschrieben).");
 }
 
 async function refreshSaved(){
@@ -1654,7 +1670,6 @@ function mailBody(phase){
     "Im Anhang finden Sie das vollständige Protokoll als PDF."
   ].join("\n");
 }
-
 function showPdfOverlay(on){
   document.getElementById("pdfLoadingOverlay").classList.toggle("show", !!on);
 }
@@ -1688,6 +1703,23 @@ async function addImageContain(pdf, dataUrl, format, x, y, boxW, boxH){
   }
 }
 
+/* PDF Footer on every page */
+function addPdfFooter(pdf){
+  try{
+    const pageCount = pdf.getNumberOfPages();
+    for(let p=1; p<=pageCount; p++){
+      pdf.setPage(p);
+      const w = pdf.internal.pageSize.getWidth();
+      const h = pdf.internal.pageSize.getHeight();
+      pdf.setFontSize(9);
+      pdf.setTextColor(90,100,120);
+      pdf.text(PDF_FOOTER_LINES[0], w/2, h-12, { align:"center" });
+      pdf.text(PDF_FOOTER_LINES[1], w/2, h-7,  { align:"center" });
+    }
+  }catch(e){}
+}
+
+/* PDF generation incl. required meta fields */
 async function generatePdfBlob(phase){
   if(!window.jspdf?.jsPDF){
     alert("PDF-Bibliothek (jsPDF) konnte nicht geladen werden.");
@@ -1704,6 +1736,14 @@ async function generatePdfBlob(phase){
     const raftId = document.getElementById("raftId").value.trim();
     const bookingRef = document.getElementById("bookingRef").value.trim();
 
+    const handoverDate = document.getElementById("handoverDate").value;
+    const handoverTime = document.getElementById("handoverTime").value;
+    const handoverBy   = document.getElementById("handoverBy").value.trim();
+
+    const returnDate = document.getElementById("returnDate").value;
+    const returnTime = document.getElementById("returnTime").value;
+    const returnBy   = document.getElementById("returnBy").value.trim();
+
     const title = (phase==="handover") ? "Übergabeprotokoll" : "Rückgabeprotokoll";
     let y = 16;
 
@@ -1716,10 +1756,23 @@ async function generatePdfBlob(phase){
     pdf.setFontSize(11);
     pdf.setFont(undefined, "normal");
     pdf.setTextColor(11,18,32);
+
+    // Kopfblock: IMMER mit Kunde + Datum/Uhrzeit + Rückgabe durchgeführt von
     pdf.text("Buchungsreferenz: " + bookingRef, 20, y); y += 6;
     pdf.text("Vorgang: " + recordId, 20, y); y += 6;
     pdf.text("Floß: " + raftId, 20, y); y += 6;
-    pdf.text("Kunde: " + customerName, 20, y); y += 8;
+    pdf.text("Kunde: " + customerName, 20, y); y += 6;
+
+    if(phase==="handover"){
+      pdf.text("Übergabe Datum/Uhrzeit: " + (handoverDate || "-") + " " + (handoverTime || ""), 20, y); y += 6;
+      pdf.text("Übergabe durchgeführt von: " + (handoverBy || "-"), 20, y); y += 6;
+    }else{
+      pdf.text("Rückgabe Datum/Uhrzeit: " + (returnDate || "-") + " " + (returnTime || ""), 20, y); y += 6;
+      pdf.text("Rückgabe durchgeführt von: " + (returnBy || "-"), 20, y); y += 6;
+    }
+
+    // Zusätzlich: Rückgabe durchgeführt von (MIT AUFNEHMEN in beiden PDFs)
+    pdf.text("Rückgabe durchgeführt von: " + (returnBy || "-"), 20, y); y += 8;
 
     pdf.setFont(undefined, "bold");
     pdf.setTextColor(11,42,58);
@@ -1826,13 +1879,14 @@ async function generatePdfBlob(phase){
     if(s4) await addImageContain(pdf, s4, "PNG", sig2x, y, sigW, sigH);
     y += sigH + 6;
 
+    addPdfFooter(pdf);
     return pdf.output("blob");
   } finally {
     showPdfOverlay(false);
   }
 }
 
-/* Share/Download helper */
+/* Download/Share – ohne Doppel-Aktionen */
 async function offerPdfDownloadOrShare(phase){
   const blob = await generatePdfBlob(phase);
   if(!blob) return;
@@ -1845,13 +1899,14 @@ async function offerPdfDownloadOrShare(phase){
   if(canShareFiles){
     try{
       await navigator.share({ files:[file], title: subject, text: "PDF-Protokoll" });
-      return;
+      return; // wichtig: kein zusätzlicher Download
     }catch(e){
-      // ignore
+      // wenn Share abgebrochen: nichts weiter tun (kein Download-Spam)
+      return;
     }
   }
 
-  // Fallback download
+  // Fallback Download (einmal)
   try{
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1866,68 +1921,74 @@ async function offerPdfDownloadOrShare(phase){
 
 /* Mailen (+ PDF) – nur wenn Übergabe ODER Rückgabe unterschrieben */
 async function openEmailDraft(phase, opts={}){
-  try{ saveSensitiveLocal(); }catch(e){}
-  try{ rehydrateNow(); }catch(e){}
+  if(busy) return;
+  setBusy(true);
+  try{
+    try{ saveSensitiveLocal(); }catch(e){}
+    try{ rehydrateNow(); }catch(e){}
 
-  const allow = handoverSigned() || returnSigned();
-  if(!allow && !opts.force){
-    alert("Mailen ist nur möglich, wenn entweder die Übergabe oder die Rückgabe unterschrieben ist.");
-    return;
-  }
-
-  const to = document.getElementById("customerEmail").value.trim();
-  if(!to){
-    alert("Bitte E-Mail des Kunden eintragen.");
-    document.getElementById("customerEmail").focus();
-    return;
-  }
-
-  const subject = mailSubject();
-  if(!subject){
-    alert("Bitte Buchungsreferenz eintragen (für Betreff).");
-    document.getElementById("bookingRef").focus();
-    return;
-  }
-
-  const body = mailBody(phase);
-
-  const blob = await generatePdfBlob(phase);
-  if(!blob){
-    const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailtoUrl;
-    return;
-  }
-
-  const safeName = subject.replace(/[^a-zA-Z0-9-_]+/g,"_") + ".pdf";
-  const file = new File([blob], safeName, { type:"application/pdf" });
-  const canShareFiles = !!navigator.canShare && navigator.canShare({ files:[file] });
-
-  // Best Case: iPad Share → Mail mit Anhang
-  if(canShareFiles){
-    try{
-      await navigator.share({ files:[file], title: subject, text: body });
+    const allow = handoverSigned() || returnSigned();
+    if(!allow && !opts.force){
+      alert("Mailen ist nur möglich, wenn entweder die Übergabe oder die Rückgabe unterschrieben ist.");
       return;
-    }catch(e){
-      // fall through
     }
+
+    const to = document.getElementById("customerEmail").value.trim();
+    if(!to){
+      alert("Bitte E-Mail des Kunden eintragen.");
+      document.getElementById("customerEmail").focus();
+      return;
+    }
+
+    const subject = mailSubject();
+    if(!subject){
+      alert("Bitte Buchungsreferenz eintragen (für Betreff).");
+      document.getElementById("bookingRef").focus();
+      return;
+    }
+
+    const body = mailBody(phase);
+    const blob = await generatePdfBlob(phase);
+
+    if(!blob){
+      const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailtoUrl;
+      return;
+    }
+
+    const safeName = subject.replace(/[^a-zA-Z0-9-_]+/g,"_") + ".pdf";
+    const file = new File([blob], safeName, { type:"application/pdf" });
+    const canShareFiles = !!navigator.canShare && navigator.canShare({ files:[file] });
+
+    if(canShareFiles){
+      try{
+        await navigator.share({ files:[file], title: subject, text: body });
+        return;
+      }catch(e){
+        // Abbruch = ok, kein weiterer Spam
+        return;
+      }
+    }
+
+    // Fallback: mailto + optional EINMAL download
+    const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nHinweis: PDF-Anhang bitte aus Download/Dateien manuell anhängen.")}`;
+    window.location.href = mailtoUrl;
+
+    setTimeout(()=>{
+      try{
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = safeName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),1500);
+      }catch(e){}
+    }, 800);
+  } finally {
+    setBusy(false);
   }
-
-  // Fallback: mailto + download
-  const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nHinweis: PDF-Anhang bitte aus Download/Dateien manuell anhängen.")}`;
-  window.location.href = mailtoUrl;
-
-  setTimeout(()=>{
-    try{
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = safeName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url),1500);
-    }catch(e){}
-  }, 900);
 }
 
 /* Share Status UI */
