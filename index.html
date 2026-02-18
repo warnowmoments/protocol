@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-  <title>Warnow Moments Übergabe Rückgabe – Aurora v14.4</title>
+  <title>Warnow Moments Übergabe Rückgabe – Aurora v14.5</title>
 
   <!-- PDF: jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -316,7 +316,7 @@
         <img id="brandLogoImg" alt="Warnow Moments Logo" style="display:none"/>
         <div class="brandTitle">
           <h1>Übergabe & Rückgabe – Floß „Aurora“</h1>
-          <div class="sub">v14.4 · iPad fixes (resize+rehydrate pageshow) · Kundendaten/Ausweis/Signaturen nur lokal</div>
+          <div class="sub">v14.5 · iPad fixes · Kundendaten/Ausweis/Signaturen nur lokal</div>
         </div>
       </div>
 
@@ -496,7 +496,7 @@
           </div>
         </div>
 
-        <div class="bannerOk" id="handoverSignedBanner" style="display:none;">Übergabe ist unterschrieben. Rückgabe kann jetzt abgeschlossen werden.</div>
+        <div class="bannerOk" id="handoverSignedBanner" style="display:none;">Übergabe ist unterschrieben.</div>
       </div>
     </section>
 
@@ -504,8 +504,8 @@
     <section id="paneR" class="card" style="display:none;">
       <h2 class="sectionTitle">Rückgabe</h2>
 
-      <div id="returnLockedBanner" class="bannerWarn" style="display:none;">
-        Hinweis: Du kannst die Rückgabe-Checkliste schon ausfüllen, aber Speichern & Unterschrift sind erst möglich, wenn die Übergabe unterschrieben ist.
+      <div class="bannerWarn" id="returnUnlockedInfo" style="display:none;">
+        Hinweis: Rückgabe ist auch ohne hinterlegte Übergabe-Unterschrift möglich (falls Übergabe-PDF bereits versendet wurde).
       </div>
 
       <div id="returnForm">
@@ -609,7 +609,7 @@ function dlog(...a){ try{ if(DEBUGSIG) console.log(...a); }catch(e){} }
 
 /* Supabase */
 const SUPABASE_URL = "https://fnktiyujyznbbhwkeyww.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_cJyOwgz2NXfDiTj7mRUVrQ_VMAMoVdd";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_KEY_HERE";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const TABLE_PROTOCOLS = "protocols";
 
@@ -673,7 +673,7 @@ const RETURN_DEFAULT = [
 ];
 
 /* Lokale Speicherung (sensibel) */
-const LS_LOCAL_KEY = "wmaurora_sensitive_local_v144";
+const LS_LOCAL_KEY = "wmaurora_sensitive_local_v145";
 
 /* State */
 let mainTab = "handover";
@@ -740,7 +740,7 @@ function setLocalMap(m){
   try{ localStorage.setItem(LS_LOCAL_KEY, JSON.stringify(m)); }catch(e){}
 }
 
-/* Signatur vorhanden? */
+/* recordId Lock wenn Übergabe-Signaturen existieren */
 function anyHandoverSigPresent(){
   try{
     return (!sigPads.sigHCustomer?.isEmpty?.() || !sigPads.sigHStaff?.isEmpty?.());
@@ -755,11 +755,10 @@ function lockRecordIdIfNeeded(){
       el.setAttribute("readonly","readonly");
       el.style.opacity = "0.9";
     }
-    dlog("recordId locked because handover signatures exist");
   }
 }
 
-/* Sensible Daten lokal speichern (inkl. Übergabe-Unterschriften) */
+/* Sensible Daten lokal speichern (Fotos + Signaturen) */
 function saveSensitiveLocal(){
   const recordId = document.getElementById("recordId").value.trim();
   if(!recordId) return;
@@ -769,8 +768,6 @@ function saveSensitiveLocal(){
     customerEmail: document.getElementById("customerEmail").value.trim(),
     idFront: photos.id.front,
     idBack: photos.id.back,
-
-    // Signaturen lokal:
     sigHCustomer: (sigPads.sigHCustomer?.isEmpty?.() ? null : sigPads.sigHCustomer.dataUrl()),
     sigHStaff:    (sigPads.sigHStaff?.isEmpty?.() ? null : sigPads.sigHStaff.dataUrl()),
     sigRCustomer: (sigPads.sigRCustomer?.isEmpty?.() ? null : sigPads.sigRCustomer.dataUrl()),
@@ -797,8 +794,7 @@ function drawDataUrlOnCanvas(canvasId, dataUrl){
     ctx.drawImage(img,0,0,canvas.width,canvas.height);
     saveSensitiveLocal();
     updatePhaseLocks();
-    updateWorkflowLocks();
-    updateStatePill();
+    updateWorkflow();
   };
   img.src = dataUrl;
 }
@@ -852,29 +848,17 @@ function rehydrateLocalForCurrentRecord(){
 
   syncIdPhotoUI(false);
 
-  // Signaturen nachziehen nur wenn Canvas leer
   try{ if(sigPads.sigHCustomer?.isEmpty?.() && local.sigHCustomer) drawDataUrlOnCanvas("sigHCustomer", local.sigHCustomer); }catch(e){}
   try{ if(sigPads.sigHStaff?.isEmpty?.() && local.sigHStaff) drawDataUrlOnCanvas("sigHStaff", local.sigHStaff); }catch(e){}
   try{ if(sigPads.sigRCustomer?.isEmpty?.() && local.sigRCustomer) drawDataUrlOnCanvas("sigRCustomer", local.sigRCustomer); }catch(e){}
   try{ if(sigPads.sigRStaff?.isEmpty?.() && local.sigRStaff) drawDataUrlOnCanvas("sigRStaff", local.sigRStaff); }catch(e){}
 
-  updateWorkflowLocks();
-  updateStatePill();
+  updateWorkflow();
   updatePhaseLocks();
 }
-
 function rehydrateNow(){
   try{ rehydrateLocalForCurrentRecord(); }catch(e){}
-  try{ updateWorkflowLocks(); updateStatePill(); updatePhaseLocks(); }catch(e){}
-  try{
-    dlog("rehydrateNow", {
-      recordId: document.getElementById("recordId")?.value,
-      HcustEmpty: sigPads.sigHCustomer?.isEmpty?.(),
-      HstaffEmpty: sigPads.sigHStaff?.isEmpty?.(),
-      RcustEmpty: sigPads.sigRCustomer?.isEmpty?.(),
-      RstaffEmpty: sigPads.sigRStaff?.isEmpty?.()
-    });
-  }catch(e){}
+  try{ updateWorkflow(); updatePhaseLocks(); }catch(e){}
 }
 
 /* Checklist model */
@@ -1103,8 +1087,7 @@ function setupSignature(canvasId){
   function end(){
     drawing = false; last = null;
     saveSensitiveLocal();
-    updateWorkflowLocks();
-    updateStatePill();
+    updateWorkflow();
     updatePhaseLocks();
   }
 
@@ -1130,9 +1113,7 @@ function setupSignature(canvasId){
 
   return {
     resize,
-    clear: ()=>{
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-    },
+    clear: ()=>ctx.clearRect(0,0,canvas.width,canvas.height),
     dataUrl: ()=>canvas.toDataURL("image/png"),
     isEmpty: ()=>{
       const img = ctx.getImageData(0,0,canvas.width,canvas.height).data;
@@ -1147,31 +1128,26 @@ function setupSignature(canvasId){
 function clearSig(id){
   sigPads[id]?.clear();
   saveSensitiveLocal();
-  updateWorkflowLocks();
-  updateStatePill();
+  updateWorkflow();
   updatePhaseLocks();
 }
 
-/* Workflow locks / state */
+/* Workflow / Status */
 function handoverSigned(){
-  const customer = !sigPads.sigHCustomer.isEmpty();
-  const staff = !sigPads.sigHStaff.isEmpty();
-  return customer && staff;
+  return !sigPads.sigHCustomer.isEmpty() && !sigPads.sigHStaff.isEmpty();
 }
 function returnSigned(){
-  const customer = !sigPads.sigRCustomer.isEmpty();
-  const staff = !sigPads.sigRStaff.isEmpty();
-  return customer && staff;
+  return !sigPads.sigRCustomer.isEmpty() && !sigPads.sigRStaff.isEmpty();
 }
-function updateWorkflowLocks(){
-  const locked = !handoverSigned();
+function updateWorkflow(){
+  // Rückgabe ist NICHT mehr gesperrt.
+  const hint = document.getElementById("returnUnlockedInfo");
+  if(hint) hint.style.display = (!handoverSigned()) ? "block" : "none";
 
-  document.getElementById("returnLockedBanner").style.display = locked ? "block" : "none";
-  document.getElementById("handoverSignedBanner").style.display = locked ? "none" : "block";
+  document.getElementById("handoverSignedBanner").style.display = handoverSigned() ? "block" : "none";
   document.getElementById("closedBanner").style.display = closedAt ? "block" : "none";
   document.getElementById("closedInfo").textContent = closedAt ? ("Geschlossen am " + new Date(closedAt).toLocaleString()) : "";
-}
-function updateStatePill(){
+
   const pill = document.getElementById("statePill");
   if(closedAt){
     pill.textContent = "Abgeschlossen";
@@ -1191,25 +1167,23 @@ function updateStatePill(){
   pill.textContent = "In Bearbeitung";
   pill.className = "pill";
 }
+
 function updatePhaseLocks(){
+  // Übergabe: Signatur nur wenn Checkliste/Fotos fertig
   const hReady = phaseReadyForSign("handover");
   document.getElementById("handoverSigBox").classList.toggle("sigLocked", !hReady);
   document.getElementById("handoverSigLockMsg").textContent = hReady
     ? "Checkliste vollständig – bitte jetzt unterschreiben."
     : "Bitte erst Übergabe-Checkliste vollständig erledigen (inkl. Pflichtfotos), dann unterschreiben.";
 
-  const rReady = phaseReadyForSign("return") && handoverSigned();
+  // Rückgabe: Signatur nur wenn Rückgabe-Checkliste/Fotos fertig (ohne Übergabe-Abhängigkeit)
+  const rReady = phaseReadyForSign("return");
   document.getElementById("returnSigBox").classList.toggle("sigLocked", !rReady);
-
-  // Wichtig: Rückgabe ist erst abschließbar, wenn Übergabe unterschrieben ist (lokal gespeichert).
   document.getElementById("returnSigLockMsg").textContent = rReady
     ? "Checkliste vollständig – bitte jetzt unterschreiben."
-    : (!handoverSigned()
-      ? "Übergabe ist noch nicht unterschrieben – Rückgabe-Unterschrift ist gesperrt. Bitte erst Übergabe unterschreiben."
-      : "Bitte erst Rückgabe-Checkliste vollständig erledigen, dann unterschreiben.");
+    : "Bitte erst Rückgabe-Checkliste vollständig erledigen (inkl. Pflichtfotos), dann unterschreiben.";
 
-  updateWorkflowLocks();
-  updateStatePill();
+  updateWorkflow();
 }
 
 /* Tabs */
@@ -1226,8 +1200,7 @@ function setMainTab(which){
   try{ sigPads.sigRStaff?.resize?.(true); }catch(e){}
 
   requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
-  updateWorkflowLocks();
-  updateStatePill();
+  updateWorkflow();
   updatePhaseLocks();
 }
 function scrollToEnd(){
@@ -1404,16 +1377,12 @@ function validatePhase(phase){
       }
     }
     if(!phaseReadyForSign("handover")) missing.push("Übergabe: Checkliste/Pflichtfotos noch nicht vollständig.");
+    // NEU: Übergabe speichern NUR mit Unterschrift (beide)
     if(sigPads.sigHCustomer.isEmpty()) missing.push("Übergabe: Unterschrift Kunde fehlt.");
     if(sigPads.sigHStaff.isEmpty()) missing.push("Übergabe: Unterschrift Vermieter fehlt.");
   }
 
   if(phase==="return"){
-    rehydrateNow();
-
-    // HARTE REGEL: Rückgabe kann NUR abgeschlossen werden, wenn Übergabe unterschrieben ist (lokal).
-    if(!handoverSigned()) missing.push("Rückgabe: Übergabe ist noch nicht unterschrieben (lokal).");
-
     const ids = ["returnDate","returnTime"];
     for(const id of ids){
       const el = document.getElementById(id);
@@ -1423,6 +1392,7 @@ function validatePhase(phase){
       }
     }
     if(!phaseReadyForSign("return")) missing.push("Rückgabe: Checkliste/Pflichtfotos noch nicht vollständig.");
+    // NEU: Vorgang abschließen NUR mit Rückgabe-Unterschrift (beide)
     if(sigPads.sigRCustomer.isEmpty()) missing.push("Rückgabe: Unterschrift Gast fehlt.");
     if(sigPads.sigRStaff.isEmpty()) missing.push("Rückgabe: Unterschrift Vermieter fehlt.");
   }
@@ -1497,9 +1467,9 @@ async function savePhase(phase){
     return;
   }
 
-  // Wenn Rückgabe gespeichert wird und unterschrieben ist -> schließen.
-  if(phase==="return" && returnSigned()){
-    closedAt = new Date().toISOString();
+  // Speichern + Status
+  if(phase==="return"){
+    closedAt = new Date().toISOString(); // Vorgang abschließen = closed
   }
 
   saveSensitiveLocal();
@@ -1511,25 +1481,19 @@ async function savePhase(phase){
   if(centralOk) await refreshSaved();
   else alert("Hinweis: Zentral speichern ging gerade nicht. PDF/Mail ist trotzdem möglich.");
 
-  updateWorkflowLocks();
+  updateWorkflow();
   updatePhaseLocks();
-  updateStatePill();
 
-  // NEU: "Übergabe speichern" dient NUR dem Speichern (keine Auto-Mail).
-  // NEU: Auch bei Rückgabe speichern/abschließen keine Auto-Mail, sondern nur optionales PDF-Angebot.
   if(phase==="handover"){
-    alert("Übergabe gespeichert.");
+    // NEU: Übergabe speichern erstellt PDF (damit man es direkt weitergeben/versenden kann), aber öffnet keine Mail.
+    await offerPdfDownloadOrShare("handover");
+    alert("Übergabe gespeichert (mit Unterschriften).");
     return;
   }
 
-  // phase==="return"
-  if(closedAt){
-    // Beim Abschließen Rückgabe: PDF erzeugen + zum Teilen/Anhängen anbieten
-    await offerPdfAfterClose("return");
-    alert("Rückgabe gespeichert. Vorgang geschlossen.");
-  }else{
-    alert("Rückgabe gespeichert.");
-  }
+  // phase==="return" => Vorgang abschließen: PDF + Mail öffnen
+  await openEmailDraft("return", { force:true }); // force: trotz Tab
+  alert("Vorgang abgeschlossen (Rückgabe unterschrieben).");
 }
 
 async function refreshSaved(){
@@ -1582,7 +1546,6 @@ async function openRecord(recordId){
 
   closedAt = (central.status==="closed") ? (central.updatedat || new Date().toISOString()) : null;
 
-  // Lokal sensible Daten laden
   const local = loadSensitiveLocal(recordId);
 
   sigPads.sigHCustomer.clear();
@@ -1613,10 +1576,8 @@ async function openRecord(recordId){
   renderChecklist("handover");
   renderChecklist("return");
 
-  updateWorkflowLocks();
+  updateWorkflow();
   updatePhaseLocks();
-  updateStatePill();
-
   requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
 }
 
@@ -1670,17 +1631,15 @@ function resetAll(){
   renderChecklist("handover");
   renderChecklist("return");
   setMainTab("handover");
-  updateWorkflowLocks();
+  updateWorkflow();
   updatePhaseLocks();
-  updateStatePill();
 }
 
-/* Email/PDF */
-function mailSubjectForPhase(phase){
-  // NEU: Betreff soll die Buchungsreferenz sein
+/* Email/PDF helpers */
+function mailSubject(){
   return document.getElementById("bookingRef").value.trim();
 }
-function mailBodyForPhase(phase){
+function mailBody(phase){
   const rid = document.getElementById("recordId").value.trim();
   const raft = document.getElementById("raftId").value.trim();
   const kind = (phase==="handover") ? "Übergabeprotokoll" : "Rückgabeprotokoll";
@@ -1768,7 +1727,9 @@ async function generatePdfBlob(phase){
 
     pdf.setFont(undefined, "normal");
     pdf.setTextColor(11,18,32);
-    const notes = (phase==="handover") ? document.getElementById("handoverNotes").value.trim() : document.getElementById("returnNotes").value.trim();
+    const notes = (phase==="handover")
+      ? document.getElementById("handoverNotes").value.trim()
+      : document.getElementById("returnNotes").value.trim();
     const noteLines = pdf.splitTextToSize(notes || "-", 170);
     pdf.text(noteLines, 20, y);
     y += Math.min(60, noteLines.length * 5 + 6);
@@ -1823,12 +1784,12 @@ async function generatePdfBlob(phase){
 
       if(it.photoDataUrl){
         const fmt = guessImageFormat(it.photoDataUrl) || "JPEG";
-        const boxW = 120, boxH = 70;
-        if(y + boxH > 280){ pdf.addPage(); y = 16; }
+        const boxW2 = 120, boxH2 = 70;
+        if(y + boxH2 > 280){ pdf.addPage(); y = 16; }
         pdf.setTextColor(11,18,32);
         pdf.text("Foto: " + (it.photoName || ""), 20, y); y += 4;
-        await addImageContain(pdf, it.photoDataUrl, fmt, 20, y, boxW, boxH);
-        y += boxH + 6;
+        await addImageContain(pdf, it.photoDataUrl, fmt, 20, y, boxW2, boxH2);
+        y += boxH2 + 6;
       }else{
         y += 2;
       }
@@ -1871,10 +1832,48 @@ async function generatePdfBlob(phase){
   }
 }
 
-/* NEU: "Mailen (+ PDF)" öffnet nur Mail, übernimmt To + Betreff=Buchungsreferenz, PDF als Anhang via Share wenn möglich */
-async function openEmailDraft(phase){
+/* Share/Download helper */
+async function offerPdfDownloadOrShare(phase){
+  const blob = await generatePdfBlob(phase);
+  if(!blob) return;
+
+  const subject = mailSubject() || "protokoll";
+  const safeName = subject.replace(/[^a-zA-Z0-9-_]+/g,"_") + ".pdf";
+  const file = new File([blob], safeName, { type:"application/pdf" });
+
+  const canShareFiles = !!navigator.canShare && navigator.canShare({ files:[file] });
+  if(canShareFiles){
+    try{
+      await navigator.share({ files:[file], title: subject, text: "PDF-Protokoll" });
+      return;
+    }catch(e){
+      // ignore
+    }
+  }
+
+  // Fallback download
+  try{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = safeName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }catch(e){}
+}
+
+/* Mailen (+ PDF) – nur wenn Übergabe ODER Rückgabe unterschrieben */
+async function openEmailDraft(phase, opts={}){
   try{ saveSensitiveLocal(); }catch(e){}
   try{ rehydrateNow(); }catch(e){}
+
+  const allow = handoverSigned() || returnSigned();
+  if(!allow && !opts.force){
+    alert("Mailen ist nur möglich, wenn entweder die Übergabe oder die Rückgabe unterschrieben ist.");
+    return;
+  }
 
   const to = document.getElementById("customerEmail").value.trim();
   if(!to){
@@ -1883,29 +1882,27 @@ async function openEmailDraft(phase){
     return;
   }
 
-  const subject = mailSubjectForPhase(phase);
+  const subject = mailSubject();
   if(!subject){
     alert("Bitte Buchungsreferenz eintragen (für Betreff).");
     document.getElementById("bookingRef").focus();
     return;
   }
 
-  const body = mailBodyForPhase(phase);
+  const body = mailBody(phase);
 
-  let blob = null;
-  try{ blob = await generatePdfBlob(phase); }catch(e){ blob = null; }
-
-  // Wenn PDF nicht erzeugbar: mailto ohne Anhang
+  const blob = await generatePdfBlob(phase);
   if(!blob){
     const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoUrl;
     return;
   }
 
-  const safeName = (subject || "protokoll").replace(/[^a-zA-Z0-9-_]+/g,"_") + ".pdf";
+  const safeName = subject.replace(/[^a-zA-Z0-9-_]+/g,"_") + ".pdf";
   const file = new File([blob], safeName, { type:"application/pdf" });
   const canShareFiles = !!navigator.canShare && navigator.canShare({ files:[file] });
 
+  // Best Case: iPad Share → Mail mit Anhang
   if(canShareFiles){
     try{
       await navigator.share({ files:[file], title: subject, text: body });
@@ -1915,7 +1912,7 @@ async function openEmailDraft(phase){
     }
   }
 
-  // Fallback: mailto + Download (manuell anhängen)
+  // Fallback: mailto + download
   const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nHinweis: PDF-Anhang bitte aus Download/Dateien manuell anhängen.")}`;
   window.location.href = mailtoUrl;
 
@@ -1933,42 +1930,7 @@ async function openEmailDraft(phase){
   }, 900);
 }
 
-/* NEU: Nach dem Schließen (Rückgabe) PDF anbieten (ohne automatisch Mail zu öffnen) */
-async function offerPdfAfterClose(phase){
-  try{ saveSensitiveLocal(); }catch(e){}
-  try{ rehydrateNow(); }catch(e){}
-
-  let blob = null;
-  try{ blob = await generatePdfBlob(phase); }catch(e){ blob = null; }
-  if(!blob) return;
-
-  const subject = mailSubjectForPhase(phase) || "protokoll";
-  const safeName = subject.replace(/[^a-zA-Z0-9-_]+/g,"_") + ".pdf";
-  const file = new File([blob], safeName, { type:"application/pdf" });
-
-  const canShareFiles = !!navigator.canShare && navigator.canShare({ files:[file] });
-  if(canShareFiles){
-    try{
-      await navigator.share({ files:[file], title: subject, text: "PDF-Protokoll (Anhang)" });
-      return;
-    }catch(e){
-      // ignore
-    }
-  }
-
-  // Fallback Download
-  try{
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = safeName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1500);
-  }catch(e){}
-}
-
+/* Share Status UI */
 function updateShareStatus(){
   const el = document.getElementById("shareStatus");
   if(!el) return;
@@ -2003,9 +1965,8 @@ async function init(){
   document.getElementById("returnTime").value = nowLocalTime();
 
   syncIdPhotoUI(false);
-  updateWorkflowLocks();
+  updateWorkflow();
   updatePhaseLocks();
-  updateStatePill();
   updateShareStatus();
 
   window.addEventListener("pageshow", ()=>requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow)));
@@ -2015,11 +1976,10 @@ async function init(){
     if(!document.hidden) requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
   });
 
-  // recordId guard: wenn Übergabe-Signaturen existieren, darf recordId nicht geändert werden
   const ridEl = document.getElementById("recordId");
   ridEl.addEventListener("input", ()=>{
     if(recordIdLocked){
-      ridEl.value = ridEl.value; // stabilisieren
+      ridEl.value = ridEl.value;
     }
   });
 
