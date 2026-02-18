@@ -552,6 +552,17 @@
   function rehydrateNow(){
     try{ rehydrateLocalForCurrentRecord(); }catch(e){}
     try{ updateWorkflowLocks(); updateStatePill(); updatePhaseLocks(); }catch(e){}
+    try{
+    console.log('[rehydrateNow]', {
+      HcustEmpty: sigPads.sigHCustomer.isEmpty(),
+      HstaffEmpty: sigPads.sigHStaff.isEmpty(),
+      RcustEmpty: sigPads.sigRCustomer.isEmpty(),
+      RstaffEmpty: sigPads.sigRStaff.isEmpty()
+    });
+  }catch(e){
+    console.log('[rehydrateNow] debug failed', e);
+  }
+
   }
 
   // ===================== Checklist model =====================
@@ -801,8 +812,19 @@
   }
 
   // ===================== Workflow locks / state =====================
-  function handoverSigned(){ return !sigPads.sigHCustomer.isEmpty() && !sigPads.sigHStaff.isEmpty(); }
-  function returnSigned(){ return !sigPads.sigRCustomer.isEmpty() && !sigPads.sigRStaff.isEmpty(); }
+  function handoverSigned(){
+  const customer = !sigPads.sigHCustomer.isEmpty();
+  const staff = !sigPads.sigHStaff.isEmpty();
+  console.log('[handoverSigned]', { customer, staff, closedAt, mainTab });
+  return customer && staff;
+  }
+
+function returnSigned(){
+  const customer = !sigPads.sigRCustomer.isEmpty();
+  const staff = !sigPads.sigRStaff.isEmpty();
+  console.log('[returnSigned]', { customer, staff, closedAt, mainTab });
+  return customer && staff;
+  }
 
   function updateWorkflowLocks(){
     const locked = !handoverSigned();
