@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-  <title>Warnow Moments Übergabe Rückgabe – Aurora v14.8</title>
+  <title>Warnow Moments Übergabe Rückgabe – Aurora v14.9</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -68,7 +68,6 @@
     canvas.sig{ width:100%; height:170px; background:#ffffff; border:1px solid var(--line); border-radius:10px; touch-action:none; -webkit-user-select:none; user-select:none; }
     .sigLocked{ opacity:.55; }
     .sigLocked canvas{ pointer-events:none; }
-    .bannerWarn{ border:1px solid #fde68a; background:#fffbeb; color:#92400e; padding:10px 12px; border-radius:12px; margin:10px 0; }
     .bannerOk{ border:1px solid #bbf7d0; background:#f0fdf4; color:#166534; padding:10px 12px; border-radius:12px; margin:10px 0; }
     .modal{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:14px; z-index:9999; }
     .modal.show{ display:flex; }
@@ -95,7 +94,6 @@
       width:min(720px,100%); background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px;
       box-shadow:0 10px 26px rgba(17,24,39,.12);
     }
-
     @media print{ button, video, .modal, .noPrint, .topbar, .gateOverlay{ display:none !important; } body{ background:#fff; } .card{ box-shadow:none; } }
   </style>
 </head>
@@ -107,7 +105,7 @@
         <img id="brandLogoImg" alt="Warnow Moments Logo" style="display:none"/>
         <div class="brandTitle">
           <h1>Übergabe & Rückgabe – Floß „Aurora“</h1>
-          <div class="sub">v14.8 · Supabase Fix · Rückgabe-PDF bereinigt</div>
+          <div class="sub">v14.9 · Supabase Schema-sicher</div>
         </div>
       </div>
 
@@ -209,18 +207,9 @@
         <h2 class="sectionTitle">Übergabe</h2>
 
         <div class="row cols3">
-          <div>
-            <label>Datum *</label>
-            <input id="handoverDate" type="date" required/>
-          </div>
-          <div>
-            <label>Uhrzeit *</label>
-            <input id="handoverTime" type="time" required/>
-          </div>
-          <div>
-            <label>Übergabe durchgeführt von (Mitarbeiter)</label>
-            <input id="handoverBy" type="text" placeholder="Name"/>
-          </div>
+          <div><label>Datum *</label><input id="handoverDate" type="date" required/></div>
+          <div><label>Uhrzeit *</label><input id="handoverTime" type="time" required/></div>
+          <div><label>Übergabe durchgeführt von (Mitarbeiter)</label><input id="handoverBy" type="text" placeholder="Name"/></div>
         </div>
 
         <div class="row" style="margin-top:10px;">
@@ -261,10 +250,7 @@
         </div>
 
         <div class="row" style="margin-top:10px;">
-          <div>
-            <label>Übergabe-Hinweise / Besonderheiten *</label>
-            <textarea id="handoverNotes" required></textarea>
-          </div>
+          <div><label>Übergabe-Hinweise / Besonderheiten *</label><textarea id="handoverNotes" required></textarea></div>
         </div>
 
         <h3 class="sectionTitle" style="margin-top:14px;">Übergabe-Checkliste</h3>
@@ -300,25 +286,13 @@
         <h2 class="sectionTitle">Rückgabe</h2>
 
         <div class="row cols3">
-          <div>
-            <label>Datum *</label>
-            <input id="returnDate" type="date" required/>
-          </div>
-          <div>
-            <label>Uhrzeit *</label>
-            <input id="returnTime" type="time" required/>
-          </div>
-          <div>
-            <label>Rückgabe durchgeführt von (Mitarbeiter)</label>
-            <input id="returnBy" type="text" placeholder="Name"/>
-          </div>
+          <div><label>Datum *</label><input id="returnDate" type="date" required/></div>
+          <div><label>Uhrzeit *</label><input id="returnTime" type="time" required/></div>
+          <div><label>Rückgabe durchgeführt von (Mitarbeiter)</label><input id="returnBy" type="text" placeholder="Name"/></div>
         </div>
 
         <div class="row" style="margin-top:10px;">
-          <div>
-            <label>Rückgabe-Hinweise / Besonderheiten (z.B. neue Schäden, fehlende Teile)</label>
-            <textarea id="returnNotes" placeholder="..."></textarea>
-          </div>
+          <div><label>Rückgabe-Hinweise / Besonderheiten (z.B. neue Schäden, fehlende Teile)</label><textarea id="returnNotes" placeholder="..."></textarea></div>
         </div>
 
         <h3 class="sectionTitle" style="margin-top:14px;">Rückgabe-Checkliste</h3>
@@ -419,6 +393,7 @@ let recordIdLocked = false;
 /* Busy + Auth gate */
 let busy = false;
 let isAuthed = false;
+
 function setBusy(on){
   busy = !!on;
   ["btnSaveH","btnSaveR","btnMail"].forEach(id=>{
@@ -428,25 +403,21 @@ function setBusy(on){
 }
 function setAuthState(authed, userEmail){
   isAuthed = !!authed;
-
   const status = document.getElementById("authStatus");
   if(status){
     status.textContent = isAuthed ? ("Eingeloggt" + (userEmail ? (" als " + userEmail) : "") + ".") : "Nicht eingeloggt.";
   }
-
   const gate = document.getElementById("gateOverlay");
   if(gate){
     gate.classList.toggle("show", !isAuthed);
     gate.setAttribute("aria-hidden", String(!!isAuthed));
   }
-
   const area = document.getElementById("appArea");
   if(area){
     area.querySelectorAll("input, textarea, select, button").forEach(el=>{
       el.disabled = !isAuthed || busy;
     });
   }
-
   setBusy(busy);
 
   if(!isAuthed){
@@ -553,7 +524,7 @@ const RETURN_DEFAULT = [
 ];
 
 /* Local sensitive storage */
-const LS_LOCAL_KEY = "wmaurora_sensitive_local_v148";
+const LS_LOCAL_KEY = "wmaurora_sensitive_local_v149";
 function getLocalMap(){ try{ return JSON.parse(localStorage.getItem(LS_LOCAL_KEY)) || {}; }catch(e){ return {}; } }
 function setLocalMap(m){ try{ localStorage.setItem(LS_LOCAL_KEY, JSON.stringify(m)); }catch(e){} }
 
@@ -1149,43 +1120,20 @@ function validatePhase(phase){
   return { ok: missing.length===0, missing };
 }
 
-/* Central record: robust schema (recordid + status + updatedat + payload JSON) */
-function collectCentralPayload(){
+/* Central record: ONLY write columns that typically exist */
+function collectCentralRecordMinimal(){
   return {
-    recordId: document.getElementById("recordId").value.trim(),
-    bookingRef: document.getElementById("bookingRef").value.trim(),
-    resourceId: document.getElementById("raftId").value.trim(),
-    handover: {
-      date: document.getElementById("handoverDate").value,
-      time: document.getElementById("handoverTime").value,
-      by: document.getElementById("handoverBy").value.trim(),
-      idChecked: document.getElementById("idChecked").value,
-      notes: document.getElementById("handoverNotes").value.trim(),
-      checklist: handoverItems
-    },
-    return: {
-      date: document.getElementById("returnDate").value,
-      time: document.getElementById("returnTime").value,
-      by: document.getElementById("returnBy").value.trim(),
-      notes: document.getElementById("returnNotes").value.trim(),
-      checklist: returnItems
-    }
-  };
-}
-function collectCentralRecord(){
-  const payload = collectCentralPayload();
-  return {
-    recordid: payload.recordId,
+    recordid: document.getElementById("recordId").value.trim(),
     status: closedAt ? "closed" : "open",
-    updatedat: new Date().toISOString(),
-    payload
+    updatedat: new Date().toISOString()
   };
 }
 async function upsertCentralRecord(){
   if(!isAuthed) return false;
-  const rec = collectCentralRecord();
+  const rec = collectCentralRecordMinimal();
   if(!rec.recordid) return false;
 
+  // Wichtig: KEINE payload/payload/bookingref Spalten mehr
   const { error } = await sb.from(TABLE_PROTOCOLS).upsert(rec, { onConflict:"recordid" });
   if(error){
     alert("Speichern fehlgeschlagen: " + error.message);
@@ -1195,7 +1143,7 @@ async function upsertCentralRecord(){
 }
 async function loadCentralRecord(recordId){
   if(!isAuthed) return null;
-  const { data, error } = await sb.from(TABLE_PROTOCOLS).select("*").eq("recordid", recordId).maybeSingle();
+  const { data, error } = await sb.from(TABLE_PROTOCOLS).select("recordid, status, updatedat").eq("recordid", recordId).maybeSingle();
   if(error){ alert("Laden fehlgeschlagen: " + error.message); return null; }
   return data;
 }
@@ -1215,28 +1163,20 @@ async function savePhase(phase){
     if(phase==="return") closedAt = new Date().toISOString();
     saveSensitiveLocal();
 
-    let centralOk = true;
-    try{ centralOk = await upsertCentralRecord(); }catch(e){ centralOk = false; }
+    // Zentral speichern ist optional: wenn es scheitert, blockiert es PDF/Mail nicht
+    try{ await upsertCentralRecord(); }catch(e){}
 
-    if(centralOk) await refreshSaved();
-
+    await refreshSaved();
     updateWorkflow();
     updatePhaseLocks();
 
-    // Nach Übergabe direkt Mail/Share ermöglichen (wurde durch Supabase-Fehler blockiert)
-    if(phase==="handover"){
-      await openEmailDraft("handover", { force:true });
-      return;
-    }
-    await openEmailDraft("return", { force:true });
+    await openEmailDraft(phase, { force:true });
   } finally {
     setBusy(false);
   }
 }
 async function refreshSaved(){
   if(!isAuthed) return;
-
-  // Minimal select: keine bookingref-Abhängigkeit mehr
   const { data, error } = await sb
     .from(TABLE_PROTOCOLS)
     .select("recordid, status, updatedat")
@@ -1261,33 +1201,14 @@ async function refreshSaved(){
 }
 async function openRecord(recordId){
   if(!isAuthed) return;
+
+  // Zentral gibt es nur Minimaldaten; Details bleiben lokal (wie gewünscht/sensibel)
   const central = await loadCentralRecord(recordId);
-  if(!central){ alert("Nicht gefunden (recordId)."); return; }
+  document.getElementById("recordId").value = recordId;
 
-  // New schema: payload bevorzugen, sonst fallback auf alte Felder
-  const p = central.payload || {};
+  closedAt = (central?.status==="closed") ? (central.updatedat || new Date().toISOString()) : null;
 
-  document.getElementById("recordId").value = central.recordid || p.recordId || recordId;
-  document.getElementById("bookingRef").value = p.bookingRef || "";
-  document.getElementById("raftId").value = p.resourceId || "Aurora";
-
-  const h = p.handover || central.handover || {};
-  document.getElementById("handoverDate").value = h.date || "";
-  document.getElementById("handoverTime").value = h.time || "";
-  document.getElementById("handoverBy").value = h.by || "";
-  document.getElementById("idChecked").value = h.idChecked || "";
-  document.getElementById("handoverNotes").value = h.notes || "";
-  handoverItems = (Array.isArray(h.checklist) && h.checklist.length>0) ? h.checklist : buildItems("handover", HANDOVER_DEFAULT);
-
-  const r = p.return || central.return || {};
-  document.getElementById("returnDate").value = r.date || "";
-  document.getElementById("returnTime").value = r.time || "";
-  document.getElementById("returnBy").value = r.by || "";
-  document.getElementById("returnNotes").value = r.notes || "";
-  returnItems = (Array.isArray(r.checklist) && r.checklist.length>0) ? r.checklist : buildItems("return", RETURN_DEFAULT);
-
-  closedAt = (central.status==="closed") ? (central.updatedat || new Date().toISOString()) : null;
-
+  // Lokales Wiederherstellen (Kunde/Email/Fotos/Signaturen)
   const local = loadSensitiveLocal(recordId);
   sigPads.sigHCustomer.clear(); sigPads.sigHStaff.clear(); sigPads.sigRCustomer.clear(); sigPads.sigRStaff.clear();
 
@@ -1307,8 +1228,6 @@ async function openRecord(recordId){
     syncIdPhotoUI(false);
   }
 
-  renderChecklist("handover");
-  renderChecklist("return");
   updateWorkflow();
   updatePhaseLocks();
   requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
@@ -1369,9 +1288,7 @@ function resetAll(){
 }
 
 /* PDF + Mail */
-function mailSubject(){
-  return (document.getElementById("bookingRef").value.trim() || "Protokoll");
-}
+function mailSubject(){ return (document.getElementById("bookingRef").value.trim() || "Protokoll"); }
 function mailBody(phase){
   const rid = document.getElementById("recordId").value.trim();
   const raft = document.getElementById("raftId").value.trim();
@@ -1553,11 +1470,7 @@ async function generatePdfBlob(phase){
       if(s1) await addImageContain(pdf, s1, "PNG", sig1x, y, sigW, sigH);
       if(s2) await addImageContain(pdf, s2, "PNG", sig2x, y, sigW, sigH);
       y += sigH + 10;
-    }else{
-      // Rückgabe: KEINE Übergabe-Unterschriften mehr
     }
-
-    // Rückgabe-Signaturen für beide Phasen optional: bei Übergabe nicht anzeigen; bei Rückgabe anzeigen
     if(phase==="return"){
       pdf.text("Rückgabe Gast", sig1x, y);
       pdf.text("Rückgabe Vermieter", sig2x, y);
@@ -1673,9 +1586,6 @@ async function init(){
   document.addEventListener("visibilitychange", ()=>{
     if(!document.hidden) requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
   });
-
-  const ridEl = document.getElementById("recordId");
-  ridEl.addEventListener("input", ()=>{ if(recordIdLocked) ridEl.value = ridEl.value; });
 }
 init();
 </script>
