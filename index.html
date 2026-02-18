@@ -1,89 +1,311 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
-  <title>Warnow Moments – Übergabe & Rückgabe (Aurora) – v14.3 (Team)</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+  <title>Warnow Moments Übergabe Rückgabe – Aurora v14.4</title>
 
   <!-- PDF: jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- Supabase JS (Client) -->
+  <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     :root{
       --wmNavy:#0b2a3a; --wmNavy2:#081f2b; --wmGold:#c9933b; --wmGold2:#d7a657;
-      --bg1:#f7f9ff; --bg2:#eef3ff;
-      --card:#ffffff; --txt:#0b1220; --muted:#4a5a7a; --line:#d7e0f2;
-      --btn:#1d4ed8; --btn2:#0b1220;
-      --ok:#16a34a; --bad:#dc2626;
-      --input:#ffffff;
-      --ctlH:40px; --ctlGap:10px;
-      --font-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --bg1:#f7f9ff; --bg2:#eef3ff; --card:#ffffff; --txt:#0b1220; --muted:#4a5a7a;
+      --line:#d7e0f2; --btn1:#1d4ed8; --btn2:#0b1220; --ok:#16a34a; --bad:#dc2626;
+      --input:#ffffff; --ctlH:40px; --ctlGap:10px;
+      --font-base:-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif;
+      box-sizing:border-box;
     }
     *{ box-sizing:border-box; }
-    body{ margin:0; font-family: var(--font-base); background: linear-gradient(180deg,var(--bg1),var(--bg2)); color:var(--txt); }
-    .topbar{ background: linear-gradient(90deg, var(--wmNavy2), var(--wmNavy)); color:#fff; padding:12px 0; border-bottom: 3px solid rgba(201,147,59,.35); }
-    .topbarInner{ max-width:1180px; margin:0 auto; padding:0 12px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    body{
+      margin:0;
+      font-family:var(--font-base);
+      background:linear-gradient(180deg,var(--bg1),var(--bg2));
+      color:var(--txt);
+    }
+    .topbar{
+      background:linear-gradient(90deg, var(--wmNavy2), var(--wmNavy));
+      color:#fff; padding:12px 0;
+      border-bottom:3px solid rgba(201,147,59,.35);
+    }
+    .topbarInner{
+      max-width:1180px; margin:0 auto; padding:0 12px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+    }
     .brand{ display:flex; align-items:center; gap:12px; min-width:280px; }
-    .brand img{ width:150px; max-width:42vw; height:auto; display:block; background:transparent; border-radius:8px; padding:6px; }
+    .brand img{
+      width:150px; max-width:42vw; height:auto; display:block;
+      background:transparent; border-radius:8px; padding:6px;
+    }
     .brandTitle{ display:flex; flex-direction:column; gap:2px; }
     .brandTitle h1{ margin:0; font-size:18px; letter-spacing:.2px; color:#fff; line-height:1.1; }
-    .brandTitle .sub{ font-size:12px; color: rgba(255,255,255,.75); }
+    .brandTitle .sub{ font-size:12px; color:rgba(255,255,255,.75); }
+
     .wrap{ max-width:1180px; margin:14px auto; padding:0 12px 44px; }
-    .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; box-shadow:0 10px 26px rgba(17,24,39,.07); }
-    .sectionTitle{ font-size:14px; margin:0 0 10px; color: var(--wmNavy); }
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px;
+      box-shadow:0 10px 26px rgba(17,24,39,.07);
+    }
+    .sectionTitle{ font-size:14px; margin:0 0 10px; color:var(--wmNavy); }
     .row{ display:grid; grid-template-columns:1fr; gap:10px; }
-    @media (min-width:740px){ .row.cols2{ grid-template-columns:1fr 1fr; } .row.cols3{ grid-template-columns:1fr 1fr 1fr; } }
-    label{ font-size:12px; color:var(--muted); display:block; margin-bottom:6px; font-family: var(--font-base); }
-    input, textarea, select{ width:100%; padding:10px 10px; border-radius:10px; background:var(--input); border:1px solid var(--line); color:var(--txt); outline:none; font-family: var(--font-base); font-size: 14px; }
+    @media (min-width:740px){
+      .row.cols2{ grid-template-columns:1fr 1fr; }
+      .row.cols3{ grid-template-columns:1fr 1fr 1fr; }
+    }
+    label{ font-size:12px; color:var(--muted); display:block; margin-bottom:6px; font-family:var(--font-base); }
+    input, textarea, select{
+      width:100%;
+      padding:10px 10px;
+      border-radius:10px;
+      background:var(--input);
+      border:1px solid var(--line);
+      color:var(--txt);
+      outline:none;
+      font-family:var(--font-base);
+      font-size:14px;
+    }
     textarea{ min-height:72px; resize:vertical; }
+
     .btns{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    button{ border:1px solid var(--line); background:#fff; color:var(--btn2); border-radius:10px; cursor:pointer; height: var(--ctlH); min-height: var(--ctlH); padding: 0 12px; display:inline-flex; align-items:center; justify-content:center; line-height:1; white-space:nowrap; font-family: var(--font-base); font-size: 14px; }
-    button.primary{ background: linear-gradient(180deg, #2563eb, #1d4ed8); border-color:#1e40af; color:#fff; }
-    button.wm{ background: linear-gradient(180deg, var(--wmGold2), var(--wmGold)); border-color: rgba(0,0,0,.08); color: #1b1b1b; font-weight: 700; }
-    button.danger{ border-color:#fecaca; background:#fff1f2; color:#991b1b; }
-    button.ghost{ background:transparent; border-color:var(--line); }
+    button{
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--btn2);
+      border-radius:10px;
+      cursor:pointer;
+      height:var(--ctlH);
+      min-height:var(--ctlH);
+      padding:0 12px;
+      display:inline-flex; align-items:center; justify-content:center;
+      line-height:1;
+      white-space:nowrap;
+      font-family:var(--font-base);
+      font-size:14px;
+    }
+    button.primary{
+      background:linear-gradient(180deg, #2563eb, #1d4ed8);
+      border-color:#1e40af;
+      color:#fff;
+    }
+    button.wm{
+      background:linear-gradient(180deg, var(--wmGold2), var(--wmGold));
+      border-color:rgba(0,0,0,.08);
+      color:#1b1b1b;
+      font-weight:700;
+    }
+    button.danger{
+      border-color:#fecaca;
+      background:#fff1f2;
+      color:#991b1b;
+    }
+    button.ghost{
+      background:transparent;
+      border-color:var(--line);
+    }
     .tiny{ font-size:12px; color:var(--muted); }
-    .pill{ display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; color:var(--muted); }
+    .pill{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:#fff;
+      font-size:12px;
+      color:var(--muted);
+    }
     .pill.ok{ border-color:#bbf7d0; color:#166534; background:#f0fdf4; }
     .pill.bad{ border-color:#fecaca; color:#991b1b; background:#fff1f2; }
+
     .tabs{ display:flex; gap:10px; flex-wrap:wrap; margin:10px 0; }
     .tabBtn[aria-selected="true"]{ background:#e8efff; border-color:#bcd0ff; }
-    details{ border:1px solid var(--line); border-radius:12px; background:#fff; overflow:hidden; }
-    summary{ cursor:pointer; padding:10px 12px; font-weight:750; display:flex; justify-content:space-between; gap:10px; color: var(--wmNavy); }
+
+    details{
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#fff;
+      overflow:hidden;
+    }
+    summary{
+      cursor:pointer;
+      padding:10px 12px;
+      font-weight:750;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      color:var(--wmNavy);
+    }
     .catBody{ padding:10px 12px 12px; border-top:1px solid var(--line); }
     .sumRight{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .sumProg{ font-size:12px; color:var(--muted); font-weight:600; }
-    .item{ border:1px solid var(--line); border-radius:12px; padding:10px; background:#f9fbff; margin-bottom:10px; }
-    .itemTop{ display:grid; grid-template-columns: 1fr; gap: 10px; }
-    @media (min-width:740px){ .itemTop{ grid-template-columns: 1fr auto; align-items: start; } }
-    .itemTitle{ font-weight:750; color: var(--wmNavy); }
-    .itemMeta{ display:flex; gap: var(--ctlGap); align-items: stretch; flex-wrap:wrap; justify-content:flex-start; }
-    .itemMeta > *{ align-self: stretch; }
-    @media (min-width:740px){ .itemMeta{ flex-wrap:nowrap; } }
-    .req{ font-size:11px; color:#991b1b; border:1px solid #fecaca; background:#fff1f2; padding:2px 6px; border-radius:999px; }
-    .chk{ display:inline-flex; align-items:center; gap:8px; border:1px solid var(--line); background:#fff; border-radius:10px; height: var(--ctlH); min-height: var(--ctlH); padding: 0 12px; line-height:1; white-space:nowrap; margin:0; }
-    .chk span{ line-height:1; } .chk input{ width:auto; margin:0; }
-    .photoThumb{ width:100%; max-height:190px; object-fit:contain; margin-top:8px; border:1px solid var(--line); border-radius:10px; background:#fff; display:none; }
-    .sigBox{ border:1px dashed rgba(11,42,58,.35); border-radius:12px; padding:10px; background: linear-gradient(180deg, #f5f9ff, #ffffff); }
-    canvas.sig{ width:100%; height:170px; background:#ffffff; border:1px solid var(--line); border-radius:10px; touch-action:none; -webkit-user-select:none; user-select:none; }
-    .sigLocked{ opacity:.55; } .sigLocked canvas{ pointer-events:none; }
-    .bannerWarn{ border:1px solid #fde68a; background:#fffbeb; color:#92400e; padding:10px 12px; border-radius:12px; margin:10px 0; }
-    .bannerOk{ border:1px solid #bbf7d0; background:#f0fdf4; color:#166534; padding:10px 12px; border-radius:12px; margin:10px 0; }
-    .modal{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:14px; z-index:9999; }
+
+    .item{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px;
+      background:#f9fbff;
+      margin-bottom:10px;
+    }
+    .itemTop{ display:grid; grid-template-columns:1fr; gap:10px; }
+    @media (min-width:740px){
+      .itemTop{ grid-template-columns:1fr auto; align-items:start; }
+      .itemMeta{ flex-wrap:nowrap; }
+    }
+    .itemTitle{ font-weight:750; color:var(--wmNavy); }
+    .itemMeta{
+      display:flex;
+      gap:var(--ctlGap);
+      align-items:stretch;
+      flex-wrap:wrap;
+      justify-content:flex-start;
+      align-self:stretch;
+    }
+    .req{
+      font-size:11px;
+      color:#991b1b;
+      border:1px solid #fecaca;
+      background:#fff1f2;
+      padding:2px 6px;
+      border-radius:999px;
+    }
+    .chk{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:10px;
+      height:var(--ctlH);
+      min-height:var(--ctlH);
+      padding:0 12px;
+      line-height:1;
+      white-space:nowrap;
+      margin:0;
+    }
+    .chk span{ line-height:1; }
+    .chk input{ width:auto; margin:0; }
+
+    .photoThumb{
+      width:100%;
+      max-height:190px;
+      object-fit:contain;
+      margin-top:8px;
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:#fff;
+      display:none;
+    }
+
+    .sigBox{
+      border:1px dashed rgba(11,42,58,.35);
+      border-radius:12px;
+      padding:10px;
+      background:linear-gradient(180deg, #f5f9ff, #ffffff);
+    }
+    canvas.sig{
+      width:100%;
+      height:170px;
+      background:#ffffff;
+      border:1px solid var(--line);
+      border-radius:10px;
+      touch-action:none;
+      -webkit-user-select:none;
+      user-select:none;
+    }
+    .sigLocked{ opacity:.55; }
+    .sigLocked canvas{ pointer-events:none; }
+
+    .bannerWarn{
+      border:1px solid #fde68a;
+      background:#fffbeb;
+      color:#92400e;
+      padding:10px 12px;
+      border-radius:12px;
+      margin:10px 0;
+    }
+    .bannerOk{
+      border:1px solid #bbf7d0;
+      background:#f0fdf4;
+      color:#166534;
+      padding:10px 12px;
+      border-radius:12px;
+      margin:10px 0;
+    }
+
+    .modal{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:14px;
+      z-index:9999;
+    }
     .modal.show{ display:flex; }
-    .modalCard{ width:min(980px,100%); background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; }
-    #camVideo{ width:100%; max-height:65vh; background:#000; border-radius:12px; }
+    .modalCard{
+      width:min(980px,100%);
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px;
+    }
+    #camVideo{
+      width:100%;
+      max-height:65vh;
+      background:#000;
+      border-radius:12px;
+    }
     .modalRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
-    .fileBtn{ position:relative; display:inline-block; border-radius:10px; padding:0 12px; background: linear-gradient(180deg, var(--wmGold2), var(--wmGold)); color:#1b1b1b; border:1px solid rgba(0,0,0,.08); cursor:pointer; height:var(--ctlH); min-height:var(--ctlH); display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; line-height:1; font-weight: 700; }
-    .fileBtn input[type="file"]{ position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
-    .pdfLoading{ position:fixed; inset:0; background:rgba(0,0,0,.7); display:none; align-items:center; justify-content:center; z-index:10000; color:#fff; font-size:18px; }
+
+    .fileBtn{
+      position:relative;
+      display:inline-block;
+      border-radius:10px;
+      padding:0 12px;
+      background:linear-gradient(180deg, var(--wmGold2), var(--wmGold));
+      color:#1b1b1b;
+      border:1px solid rgba(0,0,0,.08);
+      cursor:pointer;
+      height:var(--ctlH);
+      min-height:var(--ctlH);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      white-space:nowrap;
+      line-height:1;
+      font-weight:700;
+    }
+    .fileBtn input[type="file"]{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      opacity:0;
+      cursor:pointer;
+    }
+
+    .pdfLoading{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.7);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:10000;
+      color:#fff;
+      font-size:18px;
+    }
     .pdfLoading.show{ display:flex; }
-    .brandingCard{ display:none; }
-    #brandLogoImg{ display:none !important; }
-    @media print{ button, video, .modal, .noPrint, .topbar{ display:none !important; } body{ background:#fff; } .card{ box-shadow:none; } }
+
+    @media print{
+      button, video, .modal, .noPrint, .topbar{ display:none !important; }
+      body{ background:#fff; }
+      .card{ box-shadow:none; }
+    }
   </style>
 </head>
 
@@ -91,10 +313,10 @@
   <div class="topbar noPrint">
     <div class="topbarInner">
       <div class="brand">
-        <img id="brandLogoImg" alt="Warnow Moments Logo" style="display:none;">
+        <img id="brandLogoImg" alt="Warnow Moments Logo" style="display:none"/>
         <div class="brandTitle">
           <h1>Übergabe & Rückgabe – Floß „Aurora“</h1>
-          <div class="sub">v14.3 · iPad fixes (resize+rehydrate pageshow) · Kundendaten/Ausweis/Signaturen nur lokal</div>
+          <div class="sub">v14.4 · iPad fixes (resize+rehydrate pageshow) · Kundendaten/Ausweis/Signaturen nur lokal</div>
         </div>
       </div>
 
@@ -109,25 +331,24 @@
   </div>
 
   <div class="wrap">
-
     <section class="card noPrint" id="authCard">
       <h2 class="sectionTitle">Team-Login</h2>
       <div class="row cols3">
         <div>
           <label>E-Mail</label>
-          <input id="loginEmail" type="email" autocomplete="username" />
+          <input id="loginEmail" type="email" autocomplete="username"/>
         </div>
         <div>
           <label>Passwort</label>
-          <input id="loginPassword" type="password" autocomplete="current-password" />
+          <input id="loginPassword" type="password" autocomplete="current-password"/>
         </div>
-        <div style="display:flex;align-items:end;gap:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:end;gap:10px;flex-wrap:wrap;">
           <button class="primary" type="button" onclick="login()">Login</button>
           <button class="ghost" type="button" onclick="logout()">Logout</button>
         </div>
       </div>
-      <div class="tiny" id="authStatus" style="margin-top:8px">Nicht eingeloggt.</div>
-      <div class="tiny" id="netStatus" style="margin-top:4px"></div>
+      <div class="tiny" id="authStatus" style="margin-top:8px;">Nicht eingeloggt.</div>
+      <div class="tiny" id="netStatus" style="margin-top:4px;"></div>
     </section>
 
     <section class="card" style="margin-top:12px;">
@@ -136,40 +357,35 @@
       <div class="row cols3">
         <div>
           <label>Vorgangsnummer (recordId) * (zentraler Schlüssel)</label>
-          <input id="recordId" type="text" required>
+          <input id="recordId" type="text" required/>
         </div>
         <div>
           <label>Kunde (Name) * (nur lokal)</label>
-          <input id="customerName" type="text" required>
+          <input id="customerName" type="text" required/>
         </div>
         <div>
           <label>E-Mail Kunde (für Protokoll) * (nur lokal)</label>
-          <input id="customerEmail" type="email" required>
+          <input id="customerEmail" type="email" required/>
         </div>
       </div>
 
       <div class="row cols3" style="margin-top:10px;">
         <div>
           <label>Floß / Kennung</label>
-          <input id="raftId" type="text" value="Aurora">
+          <input id="raftId" type="text" value="Aurora"/>
         </div>
         <div>
           <label>Buchungsreferenz *</label>
-          <input id="bookingRef" type="text" required>
+          <input id="bookingRef" type="text" required/>
         </div>
         <div>
           <label>Status</label>
           <div class="pill" id="statePill">In Bearbeitung</div>
-          <div class="tiny" id="closedInfo" style="margin-top:6px;">—</div>
+          <div class="tiny" id="closedInfo" style="margin-top:6px;"></div>
         </div>
       </div>
 
       <div class="row cols3" style="margin-top:10px;">
-        <div>
-          <label>Auto-E-Mail nach Speichern</label>
-          <label class="chk"><input id="autoEmailH" type="checkbox" checked> Übergabe-Mail öffnen</label>
-          <label class="chk" style="margin-top:8px;"><input id="autoEmailR" type="checkbox" checked> Rückgabe-Mail öffnen</label>
-        </div>
         <div>
           <label>Gespeicherte Vorgänge (zentral)</label>
           <div class="btns">
@@ -182,6 +398,7 @@
           <div class="tiny">iPad: „Mailen (+ PDF)“ → am besten „Teilen → Mail“ (mit Anhang). Sonst Download + Mail-Entwurf.</div>
           <div class="tiny" id="shareStatus" style="margin-top:6px;"></div>
         </div>
+        <div></div>
       </div>
     </section>
 
@@ -196,16 +413,27 @@
       <h2 class="sectionTitle">Übergabe</h2>
 
       <div class="row cols3">
-        <div><label>Datum *</label><input id="handoverDate" type="date" required></div>
-        <div><label>Uhrzeit *</label><input id="handoverTime" type="time" required></div>
-        <div><label>Übergabe durchgeführt von (Mitarbeiter)</label><input id="handoverBy" type="text" placeholder="Name"></div>
+        <div>
+          <label>Datum *</label>
+          <input id="handoverDate" type="date" required/>
+        </div>
+        <div>
+          <label>Uhrzeit *</label>
+          <input id="handoverTime" type="time" required/>
+        </div>
+        <div>
+          <label>Übergabe durchgeführt von (Mitarbeiter)</label>
+          <input id="handoverBy" type="text" placeholder="Name"/>
+        </div>
       </div>
 
       <div class="row" style="margin-top:10px;">
         <div>
           <label>Ausweis geprüft? *</label>
           <select id="idChecked" required>
-            <option value="">—</option><option value="ja">Ja</option><option value="nein">Nein</option>
+            <option value=""></option>
+            <option value="ja">Ja</option>
+            <option value="nein">Nein</option>
           </select>
         </div>
       </div>
@@ -220,10 +448,9 @@
               <button type="button" onclick="clearTargetPhoto({type:'id', side:'front'})">Löschen</button>
             </div>
           </div>
-          <div class="tiny" id="idFrontInfo">—</div>
-          <img id="idFrontImg" class="photoThumb" alt="Ausweis Vorderseite">
+          <div class="tiny" id="idFrontInfo"></div>
+          <img id="idFrontImg" class="photoThumb" alt="Ausweis Vorderseite"/>
         </div>
-
         <div class="item">
           <div class="itemTop">
             <div class="itemTitle">Rückseite</div>
@@ -232,13 +459,16 @@
               <button type="button" onclick="clearTargetPhoto({type:'id', side:'back'})">Löschen</button>
             </div>
           </div>
-          <div class="tiny" id="idBackInfo">—</div>
-          <img id="idBackImg" class="photoThumb" alt="Ausweis Rückseite">
+          <div class="tiny" id="idBackInfo"></div>
+          <img id="idBackImg" class="photoThumb" alt="Ausweis Rückseite"/>
         </div>
       </div>
 
       <div class="row" style="margin-top:10px;">
-        <div><label>Übergabe-Hinweise / Besonderheiten *</label><textarea id="handoverNotes" required></textarea></div>
+        <div>
+          <label>Übergabe-Hinweise / Besonderheiten *</label>
+          <textarea id="handoverNotes" required></textarea>
+        </div>
       </div>
 
       <h3 class="sectionTitle" style="margin-top:14px;">Übergabe-Checkliste</h3>
@@ -280,13 +510,25 @@
 
       <div id="returnForm">
         <div class="row cols3">
-          <div><label>Datum *</label><input id="returnDate" type="date" required></div>
-          <div><label>Uhrzeit *</label><input id="returnTime" type="time" required></div>
-          <div><label>Rückgabe durchgeführt von (Mitarbeiter)</label><input id="returnBy" type="text" placeholder="Name"></div>
+          <div>
+            <label>Datum *</label>
+            <input id="returnDate" type="date" required/>
+          </div>
+          <div>
+            <label>Uhrzeit *</label>
+            <input id="returnTime" type="time" required/>
+          </div>
+          <div>
+            <label>Rückgabe durchgeführt von (Mitarbeiter)</label>
+            <input id="returnBy" type="text" placeholder="Name"/>
+          </div>
         </div>
 
         <div class="row" style="margin-top:10px;">
-          <div><label>Rückgabe-Hinweise / Besonderheiten (z.B. neue Schäden, fehlende Teile)</label><textarea id="returnNotes" placeholder="..."></textarea></div>
+          <div>
+            <label>Rückgabe-Hinweise / Besonderheiten (z.B. neue Schäden, fehlende Teile)</label>
+            <textarea id="returnNotes" placeholder="..."></textarea>
+          </div>
         </div>
 
         <h3 class="sectionTitle" style="margin-top:14px;">Rückgabe-Checkliste</h3>
@@ -321,7 +563,7 @@
 
     <section class="card" style="margin-top:12px;">
       <h2 class="sectionTitle">Gespeicherte Vorgänge (zentral)</h2>
-      <div id="savedList" class="tiny">—</div>
+      <div id="savedList" class="tiny"></div>
     </section>
   </div>
 
@@ -340,13 +582,12 @@
   </div>
 
   <!-- iOS Fallback -->
-  <div id="fileModal" class="modal noPrint" role="dialog" aria-modal="true" aria-label="Foto aufnehmen (Fallback)">
+  <div id="fileModal" class="modal noPrint" role="dialog" aria-modal="true" aria-label="Foto aufnehmen Fallback">
     <div class="modalCard">
       <div class="tiny" id="fileTitle">Kamera / Foto</div>
       <div class="tiny" style="margin-top:6px;">Tippe unten auf „Kamera öffnen“.</div>
       <div class="modalRow noPrint" style="margin-top:12px;">
-        <label class="fileBtn">
-          Kamera öffnen
+        <label class="fileBtn">Kamera öffnen
           <input id="fallbackFile" type="file" accept="image/*" capture="environment">
         </label>
         <button type="button" class="danger" onclick="closeFileModal()">Abbrechen</button>
@@ -362,1269 +603,1434 @@
   </div>
 
 <script>
-  // ===================== Debug =====================
-  const DEBUG_SIG = true;
-  function dlog(...a){ try{ if(DEBUG_SIG) console.log(...a); }catch{} }
+/* Debug */
+const DEBUGSIG = true;
+function dlog(...a){ try{ if(DEBUGSIG) console.log(...a); }catch(e){} }
 
-  // ===================== Supabase =====================
-  const SUPABASE_URL = "https://fnktiyujyznbbhwkeyww.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_cJyOwgz2NXfDiTj7mRUVrQ_VMAMoVdd";
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const TABLE_PROTOCOLS = "protocols";
+/* Supabase */
+const SUPABASE_URL = "https://fnktiyujyznbbhwkeyww.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_cJyOwgz2NXfDiTj7mRUVrQVMAMoVdd";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const TABLE_PROTOCOLS = "protocols";
 
-  async function login(){
-    const email = document.getElementById("loginEmail").value.trim();
-    const password = document.getElementById("loginPassword").value;
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    const el = document.getElementById("authStatus");
-    if(error){ el.textContent = "Login fehlgeschlagen: " + error.message; return; }
-    el.textContent = "Eingeloggt als: " + (data.user?.email || email);
-    await refreshSaved();
+/* Auth */
+async function login(){
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  const el = document.getElementById("authStatus");
+  if(error){ el.textContent = "Login fehlgeschlagen: " + error.message; return; }
+  el.textContent = "Eingeloggt als " + (data.user?.email || email);
+  await refreshSaved();
+}
+async function logout(){
+  await sb.auth.signOut();
+  document.getElementById("authStatus").textContent = "Nicht eingeloggt.";
+  document.getElementById("savedList").textContent = "";
+}
+async function requireLogin(){
+  const data = await sb.auth.getSession();
+  if(!data.session){
+    alert("Bitte zuerst einloggen (Team-Login).");
+    return false;
   }
-  async function logout(){
-    await sb.auth.signOut();
-    document.getElementById("authStatus").textContent = "Nicht eingeloggt.";
-    document.getElementById("savedList").textContent = "—";
-  }
-  async function requireLogin(){
-    const { data } = await sb.auth.getSession();
-    if(!data.session){ alert("Bitte zuerst einloggen (Team-Login)."); return false; }
-    return true;
-  }
-  function setNetStatus(){
-    const el = document.getElementById("netStatus");
-    if(!el) return;
-    el.textContent = navigator.onLine ? "" : "Offline: Speichern/Laden ist nicht möglich.";
-  }
-  window.addEventListener("online", setNetStatus);
-  window.addEventListener("offline", setNetStatus);
+  return true;
+}
+function setNetStatus(){
+  const el = document.getElementById("netStatus");
+  if(!el) return;
+  el.textContent = navigator.onLine ? "" : "Offline: Speichern/Laden ist nicht möglich.";
+}
+window.addEventListener("online", setNetStatus);
+window.addEventListener("offline", setNetStatus);
 
-  // ===================== Checklisten Defaults =====================
-  const HANDOVER_DEFAULT = [
-    { cat:'A. Identität & Rechtliches', code:'A1', text:'Identität mit Buchungsdaten abgeglichen.', requiresPhoto:false },
-    { cat:'A. Identität & Rechtliches', code:'A2', text:'Haftungsbestätigung / AGB bestätigt.', requiresPhoto:false },
-    { cat:'B. Sicherheits-Einweisung', code:'B1', text:'Schwimmwesten/Feuerlöscher gezeigt.', requiresPhoto:false },
-    { cat:'B. Sicherheits-Einweisung', code:'B2', text:'Anker erklärt.', requiresPhoto:false },
-    { cat:'C. Technik & Steuerung', code:'C1', text:'Motor/Steuerstand erklärt.', requiresPhoto:false },
-    { cat:'E. Foto-Dokumentation (Beweissicherung)', code:'E1', text:'Zustandsfoto: Bug.', requiresPhoto:true },
-    { cat:'E. Foto-Dokumentation (Beweissicherung)', code:'E2', text:'Zustandsfoto: Heck.', requiresPhoto:true },
-    { cat:'E. Foto-Dokumentation (Beweissicherung)', code:'E3', text:'Zustandsfoto: Steuerbord.', requiresPhoto:true },
-    { cat:'E. Foto-Dokumentation (Beweissicherung)', code:'E4', text:'Zustandsfoto: Backbord.', requiresPhoto:true },
-    { cat:'E. Foto-Dokumentation (Beweissicherung)', code:'E5', text:'Zustandsfoto: Innenraum.', requiresPhoto:true }
-  ];
-  const RETURN_DEFAULT = [
-    { cat:'A. Technischer & Äußerer Check', code:'A1', text:'Schadens-Scan: Rumpf und Aufbau auf neue Kratzer/Dellen prüfen (Abgleich mit Fotos).', requiresPhoto:false },
-    { cat:'A. Technischer & Äußerer Check', code:'A2', text:'Ausrüstung: Sind alle Fender und Leinen noch an Bord?', requiresPhoto:false },
-    { cat:'A. Technischer & Äußerer Check', code:'A3', text:'Sicherheit: Schwimmwesten vollzählig und Feuerlöscher unbenutzt/vorhanden?', requiresPhoto:false },
-    { cat:'B. Inventar-Kontrolle (Neu)', code:'B1', text:'Geschirr & Besteck: Set auf Vollständigkeit prüfen.', requiresPhoto:false },
-    { cat:'B. Inventar-Kontrolle (Neu)', code:'B2', text:'Lounge & Deko: Kissen vorhanden? Künstliche Pflanzen unbeschädigt?', requiresPhoto:false },
-    { cat:'C. Grill & Sauberkeit', code:'C1', text:'Grill-Check: Grob gereinigt, Gas abgedreht, Deckel geschlossen.', requiresPhoto:false },
-    { cat:'C. Grill & Sauberkeit', code:'C2', text:'Müll-Check: Abfälle durch den Gast entfernt.', requiresPhoto:false },
-    { cat:'C. Grill & Sauberkeit', code:'C3', text:'Besenreinheit: Allgemeiner Sauberkeitszustand Oberflächen/Boden.', requiresPhoto:false },
-    { cat:'D. Abschluss', code:'D1', text:'Leergut/Zubehör zurückgenommen.', requiresPhoto:false },
-    { cat:'D. Abschluss', code:'D2', text:'Lost & Found: Blick in alle Ecken.', requiresPhoto:false },
-    { cat:'D. Abschluss', code:'D3', text:'Unterschrift: Digitale Bestätigung der Rückgabe.', requiresPhoto:false }
-  ];
+/* Checklisten Defaults */
+const HANDOVER_DEFAULT = [
+  { cat:"A. Identität / Rechtliches", code:"A1", text:"Identität mit Buchungsdaten abgeglichen.", requiresPhoto:false },
+  { cat:"A. Identität / Rechtliches", code:"A2", text:"Haftungsbestätigung / AGB bestätigt.", requiresPhoto:false },
+  { cat:"B. Sicherheits-Einweisung", code:"B1", text:"Schwimmwesten/Feuerlöscher gezeigt.", requiresPhoto:false },
+  { cat:"B. Sicherheits-Einweisung", code:"B2", text:"Anker erklärt.", requiresPhoto:false },
+  { cat:"C. Technik / Steuerung", code:"C1", text:"Motor/Steuerstand erklärt.", requiresPhoto:false },
+  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E1", text:"Zustandsfoto Bug.", requiresPhoto:true },
+  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E2", text:"Zustandsfoto Heck.", requiresPhoto:true },
+  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E3", text:"Zustandsfoto Steuerbord.", requiresPhoto:true },
+  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E4", text:"Zustandsfoto Backbord.", requiresPhoto:true },
+  { cat:"E. Foto-Dokumentation / Beweissicherung", code:"E5", text:"Zustandsfoto Innenraum.", requiresPhoto:true }
+];
 
-  // ===================== Lokale Speicherung (sensibel) =====================
-  const LS_LOCAL_KEY = 'wm_aurora_sensitive_local_v14_3';
+const RETURN_DEFAULT = [
+  { cat:"A. Technischer / äußerer Check", code:"A1", text:"Schadens-Scan Rumpf und Aufbau auf neue Kratzer/Dellen prüfen (Abgleich mit Fotos).", requiresPhoto:false },
+  { cat:"A. Technischer / äußerer Check", code:"A2", text:"Ausrüstung: Sind alle Fender und Leinen noch an Bord?", requiresPhoto:false },
+  { cat:"A. Technischer / äußerer Check", code:"A3", text:"Sicherheit: Schwimmwesten vollständig und Feuerlöscher unbenutzt/vorhanden?", requiresPhoto:false },
+  { cat:"B. Inventar-Kontrolle (Neu)", code:"B1", text:"Geschirr/Besteck-Set auf Vollständigkeit prüfen.", requiresPhoto:false },
+  { cat:"B. Inventar-Kontrolle (Neu)", code:"B2", text:"Lounge/Deko: Kissen vorhanden? Künstliche Pflanzen unbeschädigt?", requiresPhoto:false },
+  { cat:"C. Grill / Sauberkeit", code:"C1", text:"Grill-Check: Grob gereinigt, Gas abgedreht, Deckel geschlossen.", requiresPhoto:false },
+  { cat:"C. Grill / Sauberkeit", code:"C2", text:"Müll-Check: Abfälle durch den Gast entfernt.", requiresPhoto:false },
+  { cat:"C. Grill / Sauberkeit", code:"C3", text:"Besenreinheit: Allgemeiner Sauberkeitszustand (Oberflächen/Boden).", requiresPhoto:false },
+  { cat:"D. Abschluss", code:"D1", text:"Leergut/Zubehör zurückgenommen.", requiresPhoto:false },
+  { cat:"D. Abschluss", code:"D2", text:"Lost & Found: Blick in alle Ecken.", requiresPhoto:false },
+  { cat:"D. Abschluss", code:"D3", text:"Unterschrift: Digitale Bestätigung der Rückgabe.", requiresPhoto:false }
+];
 
-  // ===================== State =====================
-  let mainTab = 'handover';
-  let closedAt = null;
-  let handoverItems = [];
-  let returnItems = [];
-  const photos = { id: { front:{dataUrl:null,name:null}, back:{dataUrl:null,name:null} } };
+/* Lokale Speicherung (sensibel) */
+const LS_LOCAL_KEY = "wmaurora_sensitive_local_v144";
 
-  let camStream = null;
-  let camFacing = 'environment';
-  let camTarget = null;
-  let fallbackTarget = null;
+/* State */
+let mainTab = "handover";
+let closedAt = null;
+let handoverItems = [];
+let returnItems = [];
+const photos = { id:{ front:{dataUrl:null,name:null}, back:{dataUrl:null,name:null} } };
 
-  const sigPads = {};
-  let recordIdLocked = false;
+let camStream = null;
+let camFacing = "environment";
+let camTarget = null;
+let fallbackTarget = null;
 
-  // ===================== Helpers =====================
-  const pad2 = n => String(n).padStart(2,'0');
-  function nowLocalDate(){ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
-  function nowLocalTime(){ const d=new Date(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
-  function suggestRecordId(){ const d=new Date(); return `WM-${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}-${pad2(d.getHours())}${pad2(d.getMinutes())}`; }
-  function escapeHtml(s){ return String(s ?? '').replace(/[&<>\\\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\\':'\\','"':'&quot;',"'":'&#39;'}[c] || c)); }
-  function slug(s){
-    return String(s ?? '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase() || 'cat';
-  }
-  function fileToDataUrl(file){
-    return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
-  }
-  function isSecureCameraPossible(){ return !!(navigator.mediaDevices?.getUserMedia && window.isSecureContext); }
+const sigPads = {};
+let recordIdLocked = false;
 
-  function getLocalMap(){ try{ return JSON.parse(localStorage.getItem(LS_LOCAL_KEY) || '{}'); }catch{ return {}; } }
-  function setLocalMap(m){ try{ localStorage.setItem(LS_LOCAL_KEY, JSON.stringify(m || {})); }catch(e){} }
+/* Helpers */
+const pad2 = n => String(n).padStart(2,"0");
+function nowLocalDate(){
+  const d = new Date();
+  return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());
+}
+function nowLocalTime(){
+  const d = new Date();
+  return pad2(d.getHours())+":"+pad2(d.getMinutes());
+}
+function suggestRecordId(){
+  const d = new Date();
+  return "WM-"+d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate())+"-"+pad2(d.getHours())+pad2(d.getMinutes());
+}
+function escapeHtml(s){
+  return String(s ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#39;");
+}
+function slug(s){
+  return String(s ?? "")
+    .normalize("NFKD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-zA-Z0-9]+/g,"-")
+    .replace(/-+/g,"-")
+    .toLowerCase();
+}
+function fileToDataUrl(file){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = ()=>res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+function isSecureCameraPossible(){
+  return !!navigator.mediaDevices?.getUserMedia && window.isSecureContext;
+}
 
-  function anyHandoverSigPresent(){
-    try{
-      return (!sigPads.sigHCustomer?.isEmpty?.() || !sigPads.sigHStaff?.isEmpty?.());
-    }catch{
-      return false;
+/* Local map helpers */
+function getLocalMap(){
+  try{ return JSON.parse(localStorage.getItem(LS_LOCAL_KEY)) || {}; }
+  catch(e){ return {}; }
+}
+function setLocalMap(m){
+  try{ localStorage.setItem(LS_LOCAL_KEY, JSON.stringify(m)); }catch(e){}
+}
+
+/* Signatur vorhanden? */
+function anyHandoverSigPresent(){
+  try{
+    return (!sigPads.sigHCustomer?.isEmpty?.() || !sigPads.sigHStaff?.isEmpty?.());
+  }catch(e){ return false; }
+}
+function lockRecordIdIfNeeded(){
+  if(recordIdLocked) return;
+  if(anyHandoverSigPresent()){
+    recordIdLocked = true;
+    const el = document.getElementById("recordId");
+    if(el){
+      el.setAttribute("readonly","readonly");
+      el.style.opacity = "0.9";
     }
+    dlog("recordId locked because handover signatures exist");
   }
+}
 
-  function lockRecordIdIfNeeded(){
-    if(recordIdLocked) return;
-    if(anyHandoverSigPresent()){
-      recordIdLocked = true;
-      const el = document.getElementById('recordId');
-      if(el){
-        el.setAttribute('readonly','readonly');
-        el.style.opacity = '0.9';
-      }
-      dlog('[recordId] locked because signatures exist');
-    }
-  }
+/* Sensible Daten lokal speichern (inkl. Übergabe-Unterschriften) */
+function saveSensitiveLocal(){
+  const recordId = document.getElementById("recordId").value.trim();
+  if(!recordId) return;
+  const map = getLocalMap();
+  map[recordId] = {
+    customerName: document.getElementById("customerName").value.trim(),
+    customerEmail: document.getElementById("customerEmail").value.trim(),
+    idFront: photos.id.front,
+    idBack: photos.id.back,
 
-  function saveSensitiveLocal(){
-    const recordId = document.getElementById('recordId').value.trim();
-    if(!recordId) return;
+    // Signaturen lokal:
+    sigHCustomer: (sigPads.sigHCustomer?.isEmpty?.() ? null : sigPads.sigHCustomer.dataUrl()),
+    sigHStaff:    (sigPads.sigHStaff?.isEmpty?.() ? null : sigPads.sigHStaff.dataUrl()),
+    sigRCustomer: (sigPads.sigRCustomer?.isEmpty?.() ? null : sigPads.sigRCustomer.dataUrl()),
+    sigRStaff:    (sigPads.sigRStaff?.isEmpty?.() ? null : sigPads.sigRStaff.dataUrl())
+  };
+  setLocalMap(map);
+  lockRecordIdIfNeeded();
+}
+function loadSensitiveLocal(recordId){
+  const map = getLocalMap();
+  return map[recordId] || null;
+}
 
-    const map = getLocalMap();
-    map[recordId] = {
-      customerName: document.getElementById('customerName').value.trim(),
-      customerEmail: document.getElementById('customerEmail').value.trim(),
-      idFront: photos.id.front,
-      idBack: photos.id.back,
-      sigHCustomer: sigPads.sigHCustomer?.isEmpty?.() ? null : sigPads.sigHCustomer.dataUrl(),
-      sigHStaff: sigPads.sigHStaff?.isEmpty?.() ? null : sigPads.sigHStaff.dataUrl(),
-      sigRCustomer: sigPads.sigRCustomer?.isEmpty?.() ? null : sigPads.sigRCustomer.dataUrl(),
-      sigRStaff: sigPads.sigRStaff?.isEmpty?.() ? null : sigPads.sigRStaff.dataUrl()
-    };
-    setLocalMap(map);
-
-    lockRecordIdIfNeeded();
-  }
-
-  function loadSensitiveLocal(recordId){
-    const map = getLocalMap();
-    return map[recordId] || null;
-  }
-
-  function drawDataUrlOnCanvas(canvasId, dataUrl){
-    if(!dataUrl) return;
-    const canvas = document.getElementById(canvasId);
-    if(!canvas) return;
-
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    const img = new Image();
-
-    img.onload = ()=>{
-      // Canvas zuerst auf korrekte Pixelgröße bringen
-      try{ sigPads[canvasId]?.resize?.(false); }catch{}
-
-      // In Canvas-Pixeln zeichnen (wichtig für isEmpty auf iPad)
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      saveSensitiveLocal();
-      updatePhaseLocks();
-      updateWorkflowLocks();
-      updateStatePill();
-    };
-
-    img.src = dataUrl;
-  }
-
-  function syncIdPhotoUI(doSave=true){
-    const iF=document.getElementById('idFrontInfo'), iB=document.getElementById('idBackInfo');
-    const imgF=document.getElementById('idFrontImg'), imgB=document.getElementById('idBackImg');
-
-    if(iF) iF.textContent = photos.id.front.name ? photos.id.front.name : '—';
-    if(iB) iB.textContent = photos.id.back.name ? photos.id.back.name : '—';
-
-    if (imgF){
-      if (photos.id.front.dataUrl){ imgF.src=photos.id.front.dataUrl; imgF.style.display='block'; }
-      else { imgF.removeAttribute('src'); imgF.style.display='none'; }
-    }
-
-    if (imgB){
-      if (photos.id.back.dataUrl){ imgB.src=photos.id.back.dataUrl; imgB.style.display='block'; }
-      else { imgB.removeAttribute('src'); imgB.style.display='none'; }
-    }
-
-    if(doSave) saveSensitiveLocal();
-    updatePhaseLocks();
-  }
-
-  function rehydrateLocalForCurrentRecord(){
-    const recordId = document.getElementById('recordId').value.trim();
-    if(!recordId) return;
-
-    const local = loadSensitiveLocal(recordId);
-    if(!local) return;
-
-    if(!document.getElementById('customerName').value.trim() && local.customerName){
-      document.getElementById('customerName').value = local.customerName;
-    }
-    if(!document.getElementById('customerEmail').value.trim() && local.customerEmail){
-      document.getElementById('customerEmail').value = local.customerEmail;
-    }
-
-    if (!photos.id.front.dataUrl && local.idFront?.dataUrl) photos.id.front = local.idFront;
-    if (!photos.id.back.dataUrl && local.idBack?.dataUrl) photos.id.back = local.idBack;
-    syncIdPhotoUI(false);
-
-    // Signaturen nachziehen (nur wenn Canvas leer)
-    if(sigPads.sigHCustomer.isEmpty() && local.sigHCustomer) drawDataUrlOnCanvas('sigHCustomer', local.sigHCustomer);
-    if(sigPads.sigHStaff.isEmpty() && local.sigHStaff) drawDataUrlOnCanvas('sigHStaff', local.sigHStaff);
-    if(sigPads.sigRCustomer.isEmpty() && local.sigRCustomer) drawDataUrlOnCanvas('sigRCustomer', local.sigRCustomer);
-    if(sigPads.sigRStaff.isEmpty() && local.sigRStaff) drawDataUrlOnCanvas('sigRStaff', local.sigRStaff);
-
-    updateWorkflowLocks(); updateStatePill(); updatePhaseLocks();
-  }
-
-  function rehydrateNow(){
-    try{ rehydrateLocalForCurrentRecord(); }catch(e){}
-    try{ updateWorkflowLocks(); updateStatePill(); updatePhaseLocks(); }catch(e){}
-
-    try{
-      dlog('[rehydrateNow]', {
-        recordId: document.getElementById('recordId')?.value,
-        HcustEmpty: sigPads.sigHCustomer?.isEmpty?.(),
-        HstaffEmpty: sigPads.sigHStaff?.isEmpty?.(),
-        RcustEmpty: sigPads.sigRCustomer?.isEmpty?.(),
-        RstaffEmpty: sigPads.sigRStaff?.isEmpty?.()
-      });
-    }catch(e){}
-  }
-
-  // ===================== Checklist model =====================
-  function buildItems(phase, def){
-    return def.map(d => ({
-      phase, cat:d.cat, catId:slug(d.cat), code:d.code,
-      id: `${phase}_${slug(d.cat)}_${d.code}`.toLowerCase(),
-      text:d.text, requiresPhoto:!!d.requiresPhoto,
-      done:false, note:'', photoDataUrl:null, photoName:null
-    }));
-  }
-  function groupByCategory(items){
-    const order=[]; const map=new Map();
-    for (const it of items){
-      if (!map.has(it.catId)){ map.set(it.catId, {label:it.cat, items:[]}); order.push(it.catId); }
-      map.get(it.catId).items.push(it);
-    }
-    return {order,map};
-  }
-  function findItem(phase, id){
-    const list = phase==='handover' ? handoverItems : returnItems;
-    return list.find(x=>x.id===id);
-  }
-  function setItemDone(phase, id, val){
-    const it = findItem(phase,id); if(!it) return;
-    it.done = !!val;
-    updatePhaseLocks(); updateCategoryProgressUI(phase); maybeAutoOpenNextCategory(phase, it.catId);
-  }
-  function setItemNote(phase,id,val){
-    const it = findItem(phase,id); if(!it) return;
-    it.note = val;
-  }
-
-  function renderChecklist(phase){
-    const wrap = document.getElementById(phase==='handover' ? 'handoverChecklistWrap' : 'returnChecklistWrap');
-    const items = phase==='handover' ? handoverItems : returnItems;
-    const {order,map} = groupByCategory(items);
-    wrap.innerHTML = '';
-
-    order.forEach((catId, idx)=>{
-      const cat = map.get(catId);
-      const det = document.createElement('details');
-      det.dataset.phase = phase;
-      det.dataset.catId = catId;
-      det.open = (idx===0);
-
-      const sum = document.createElement('summary');
-      sum.innerHTML = `
-        <span>${escapeHtml(cat.label)}</span>
-        <span class="sumRight">
-          <span class="sumProg" id="${phase}_prog_${catId}">0/0 erledigt</span>
-          <span class="pill" id="${phase}_pill_${catId}">Offen</span>
-        </span>`;
-      det.appendChild(sum);
-
-      const body = document.createElement('div');
-      body.className = 'catBody';
-
-      cat.items.forEach(it=>{
-        const div = document.createElement('div');
-        div.className='item';
-        const reqBadge = it.requiresPhoto ? `<span class="req">Foto Pflicht</span>` : '';
-        const photoInfo = it.photoName ? `📷 ${escapeHtml(it.photoName)}` : '—';
-
-        div.innerHTML = `
-          <div class="itemTop">
-            <div>
-              <div class="itemTitle">${escapeHtml(it.code)} – ${escapeHtml(it.text)}</div>
-              <div class="tiny">${reqBadge}</div>
-            </div>
-            <div class="itemMeta">
-              <label class="chk">
-                <input type="checkbox" ${it.done?'checked':''} onchange="setItemDone('${phase}','${it.id}', this.checked)">
-                <span>Erledigt *</span>
-              </label>
-              <button type="button" onclick="startCapture({type:'item', phase:'${phase}', id:'${it.id}'})">Foto aufnehmen</button>
-              <button type="button" onclick="clearTargetPhoto({type:'item', phase:'${phase}', id:'${it.id}'})">Foto löschen</button>
-            </div>
-          </div>
-          <div class="tiny" id="${phase}_photoInfo_${it.id}">${photoInfo}</div>
-          <textarea placeholder="Notiz..." oninput="setItemNote('${phase}','${it.id}', this.value)">${escapeHtml(it.note||'')}</textarea>
-          <img id="${phase}_img_${it.id}" class="photoThumb" alt="Foto ${escapeHtml(it.code)}">
-        `;
-        body.appendChild(div);
-        const img = div.querySelector('img');
-        if (it.photoDataUrl){ img.src = it.photoDataUrl; img.style.display='block'; }
-      });
-
-      det.appendChild(body);
-      wrap.appendChild(det);
-    });
-
-    updateCategoryProgressUI(phase);
-    updatePhaseLocks();
-  }
-
-  function updateCategoryProgressUI(phase){
-    const items = phase==='handover' ? handoverItems : returnItems;
-    const {order,map} = groupByCategory(items);
-    order.forEach(catId=>{
-      const cat = map.get(catId);
-      const done = cat.items.filter(x=>x.done).length;
-      const total = cat.items.length;
-      const prog = document.getElementById(`${phase}_prog_${catId}`);
-      const pill = document.getElementById(`${phase}_pill_${catId}`);
-      if (prog) prog.textContent = `${done}/${total} erledigt`;
-      if (pill){
-        const allDone = total>0 && done===total;
-        pill.textContent = allDone ? 'Fertig' : 'Offen';
-        pill.className = 'pill ' + (allDone ? 'ok' : '');
-      }
-    });
-  }
-  function maybeAutoOpenNextCategory(phase, catIdJustChanged){
-    const items = phase==='handover' ? handoverItems : returnItems;
-    const {order,map} = groupByCategory(items);
-    const cat = map.get(catIdJustChanged); if (!cat) return;
-    const catDone = cat.items.length>0 && cat.items.every(x=>x.done);
-    if (!catDone) return;
-    const idx = order.indexOf(catIdJustChanged);
-    for (let i=idx+1;i<order.length;i++){
-      const nextId = order[i];
-      const nextCat = map.get(nextId);
-      const nextDone = nextCat.items.length>0 && nextCat.items.every(x=>x.done);
-      if (!nextDone){
-        document.querySelectorAll(`details[data-phase="${phase}"]`).forEach(d=>{ if (d.dataset.catId===nextId) d.open = true; });
-        break;
-      }
-    }
-  }
-
-  function isChecklistComplete(phase){
-    const items = phase==='handover' ? handoverItems : returnItems;
-    return items.length>0 && items.every(x=>x.done);
-  }
-  function requiredPhotosOk(phase){
-    const items = phase==='handover' ? handoverItems : returnItems;
-    return items.filter(x=>x.requiresPhoto).every(x=>!!x.photoDataUrl);
-  }
-  function phaseReadyForSign(phase){ return isChecklistComplete(phase) && requiredPhotosOk(phase); }
-
-  // ===================== Signatures =====================
-  function setupSignature(canvasId){
-    const canvas = document.getElementById(canvasId);
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-    function applyPen(){
-      ctx.lineWidth = 2.2;
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = '#0b2a3a';
-    }
-
-    function resize(keepDrawing=true){
-      let snap = null;
-      if(keepDrawing){
-        try{ snap = canvas.toDataURL('image/png'); }catch(e){ snap = null; }
-      }
-
-      const rect = canvas.getBoundingClientRect();
-      const ratio = Math.max(window.devicePixelRatio || 1, 1);
-
-      const newW = Math.max(1, Math.floor(rect.width * ratio));
-      const newH = Math.max(1, Math.floor(rect.height * ratio));
-
-      if(canvas.width === newW && canvas.height === newH){
-        ctx.setTransform(ratio,0,0,ratio,0,0);
-        applyPen();
-        return;
-      }
-
-      canvas.width = newW;
-      canvas.height = newH;
-      ctx.setTransform(ratio,0,0,ratio,0,0);
-      applyPen();
-
-      if(snap){
-        const img = new Image();
-        img.onload = ()=>{
-          // Snap ist CSS-Pixel groß; Transform ist gesetzt, daher CSS-Pixel hier ok
-          ctx.drawImage(img, 0, 0, rect.width, rect.height);
-        };
-        img.src = snap;
-      }
-    }
-
-    resize(true);
-
-    let resizeTimer = null;
-    window.addEventListener('resize', ()=>{
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(()=>resize(true), 150);
-    });
-
-    let drawing=false, last=null;
-    function startAt(p){ drawing=true; last=p; }
-    function lineTo(p){
-      if(!drawing) return;
-      ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke();
-      last=p;
-    }
-    function end(){
-      drawing=false; last=null;
-      saveSensitiveLocal();
-      updateWorkflowLocks(); updateStatePill(); updatePhaseLocks();
-    }
-
-    canvas.addEventListener('pointerdown', (e)=>{ startAt({x:e.offsetX,y:e.offsetY}); e.preventDefault(); });
-    canvas.addEventListener('pointermove', (e)=>{ lineTo({x:e.offsetX,y:e.offsetY}); e.preventDefault(); });
-    canvas.addEventListener('pointerup', (e)=>{ end(); e.preventDefault(); });
-    canvas.addEventListener('pointercancel', (e)=>{ end(); e.preventDefault(); });
-
-    canvas.addEventListener('touchstart', (e)=>{
-      if(!e.touches[0]) return;
-      const r = canvas.getBoundingClientRect();
-      startAt({x:e.touches[0].clientX-r.left, y:e.touches[0].clientY-r.top});
-      e.preventDefault();
-    }, {passive:false});
-
-    canvas.addEventListener('touchmove', (e)=>{
-      if(!e.touches[0]) return;
-      const r = canvas.getBoundingClientRect();
-      lineTo({x:e.touches[0].clientX-r.left, y:e.touches[0].clientY-r.top});
-      e.preventDefault();
-    }, {passive:false});
-
-    canvas.addEventListener('touchend', (e)=>{ end(); e.preventDefault(); }, {passive:false});
-    canvas.addEventListener('touchcancel', (e)=>{ end(); e.preventDefault(); }, {passive:false});
-
-    return {
-      resize,
-      clear(){ ctx.clearRect(0,0,canvas.width,canvas.height); },
-      dataUrl(){ return canvas.toDataURL('image/png'); },
-      isEmpty(){
-        const img = ctx.getImageData(0,0,canvas.width,canvas.height).data;
-        for(let i=0;i<img.length;i+=4){
-          const r = img[i], g = img[i+1], b = img[i+2], a = img[i+3];
-          if(a > 20 && (r < 245 || g < 245 || b < 245)) return false;
-        }
-        return true;
-      }
-    };
-  }
-
-  function clearSig(id){
-    sigPads[id]?.clear();
+/* Canvas aus DataURL wiederherstellen */
+function drawDataUrlOnCanvas(canvasId, dataUrl){
+  if(!dataUrl) return;
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d",{ willReadFrequently:true });
+  const img = new Image();
+  img.onload = ()=>{
+    try{ sigPads[canvasId]?.resize?.(false); }catch(e){}
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
     saveSensitiveLocal();
-    updateWorkflowLocks(); updateStatePill(); updatePhaseLocks();
-  }
+    updatePhaseLocks();
+    updateWorkflowLocks();
+    updateStatePill();
+  };
+  img.src = dataUrl;
+}
 
-  // ===================== Workflow locks / state =====================
-  function handoverSigned(){
-    const customer = !sigPads.sigHCustomer.isEmpty();
-    const staff = !sigPads.sigHStaff.isEmpty();
-    dlog('[handoverSigned]', { customer, staff, closedAt, mainTab });
-    return customer && staff;
-  }
-  function returnSigned(){
-    const customer = !sigPads.sigRCustomer.isEmpty();
-    const staff = !sigPads.sigRStaff.isEmpty();
-    dlog('[returnSigned]', { customer, staff, closedAt, mainTab });
-    return customer && staff;
-  }
+function syncIdPhotoUI(doSave=true){
+  const iF = document.getElementById("idFrontInfo");
+  const iB = document.getElementById("idBackInfo");
+  const imgF = document.getElementById("idFrontImg");
+  const imgB = document.getElementById("idBackImg");
 
-  function updateWorkflowLocks(){
-    const locked = !handoverSigned();
-    document.getElementById('returnLockedBanner').style.display = locked ? '' : 'none';
-    document.getElementById('handoverSignedBanner').style.display = locked ? 'none' : '';
-    document.getElementById('closedBanner').style.display = closedAt ? '' : 'none';
-    document.getElementById('closedInfo').textContent = closedAt ? ('Geschlossen am: ' + new Date(closedAt).toLocaleString()) : '—';
-  }
-  function updateStatePill(){
-    const pill = document.getElementById('statePill');
-    if (closedAt){ pill.textContent='Abgeschlossen'; pill.className='pill ok'; return; }
-    if (returnSigned()){ pill.textContent='Rückgabe unterschrieben'; pill.className='pill ok'; return; }
-    if (handoverSigned()){ pill.textContent='Übergabe unterschrieben'; pill.className='pill ok'; return; }
-    pill.textContent='In Bearbeitung'; pill.className='pill';
-  }
+  if(iF) iF.textContent = photos.id.front.name ? photos.id.front.name : "";
+  if(iB) iB.textContent = photos.id.back.name ? photos.id.back.name : "";
 
-  function updatePhaseLocks(){
-    const hReady = phaseReadyForSign('handover');
-    document.getElementById('handoverSigBox').classList.toggle('sigLocked', !hReady);
-    document.getElementById('handoverSigLockMsg').textContent = hReady
-      ? 'Checkliste vollständig – bitte jetzt unterschreiben.'
-      : 'Bitte erst Übergabe-Checkliste vollständig erledigen (inkl. Pflichtfotos), dann unterschreiben.';
-
-    const rReady = phaseReadyForSign('return') && handoverSigned();
-    document.getElementById('returnSigBox').classList.toggle('sigLocked', !rReady);
-    document.getElementById('returnSigLockMsg').textContent = rReady
-      ? 'Checkliste vollständig – bitte jetzt unterschreiben.'
-      : (!handoverSigned()
-          ? 'Übergabe ist noch nicht unterschrieben – Rückgabe-Unterschrift ist gesperrt.'
-          : 'Bitte erst Rückgabe-Checkliste vollständig erledigen, dann unterschreiben.');
-
-    updateWorkflowLocks(); updateStatePill();
-  }
-
-  // ===================== Tabs =====================
-  function setMainTab(which){
-    mainTab = which;
-    document.getElementById('tabH').setAttribute('aria-selected', which==='handover');
-    document.getElementById('tabR').setAttribute('aria-selected', which==='return');
-    document.getElementById('paneH').style.display = which==='handover' ? '' : 'none';
-    document.getElementById('paneR').style.display = which==='return' ? '' : 'none';
-
-    try{ sigPads.sigHCustomer?.resize?.(true); }catch{}
-    try{ sigPads.sigHStaff?.resize?.(true); }catch{}
-    try{ sigPads.sigRCustomer?.resize?.(true); }catch{}
-    try{ sigPads.sigRStaff?.resize?.(true); }catch{}
-
-    // iPad: erst nach Layout/Resize rehydraten
-    requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
-
-    updateWorkflowLocks(); updateStatePill(); updatePhaseLocks();
-  }
-
-  function scrollToEnd(){
-    const el = document.getElementById(mainTab === 'handover' ? 'handoverEnd' : 'returnEnd');
-    if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-  }
-
-  // ===================== Kamera / Foto =====================
-  function openCamModal(title){
-    document.getElementById('camTitle').textContent = title || 'Kamera';
-    document.getElementById('camModal').classList.add('show');
-  }
-  function closeCamModal(){ document.getElementById('camModal').classList.remove('show'); }
-  function stopCamStream(){
-    if (camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
-    const v = document.getElementById('camVideo'); if (v) v.srcObject = null;
-  }
-  async function startCamStream(){
-    stopCamStream();
-    const v = document.getElementById('camVideo');
-    const constraints = { audio:false, video:{ facingMode:{ ideal: camFacing }, width:{ideal:1920}, height:{ideal:1080} } };
-    camStream = await navigator.mediaDevices.getUserMedia(constraints);
-    v.srcObject = camStream;
-    await v.play();
-  }
-
-  function targetLabel(t){
-    if (t.type==='id') return t.side==='front' ? 'Ausweis Vorderseite' : 'Ausweis Rückseite';
-    if (t.type==='item'){
-      const it = findItem(t.phase, t.id);
-      const code = it ? it.code : t.id;
-      return (t.phase==='handover' ? 'Übergabe' : 'Rückgabe') + ' Foto ' + code;
+  if(imgF){
+    if(photos.id.front.dataUrl){
+      imgF.src = photos.id.front.dataUrl;
+      imgF.style.display = "block";
+    }else{
+      imgF.removeAttribute("src");
+      imgF.style.display = "none";
     }
-    return 'Foto';
+  }
+  if(imgB){
+    if(photos.id.back.dataUrl){
+      imgB.src = photos.id.back.dataUrl;
+      imgB.style.display = "block";
+    }else{
+      imgB.removeAttribute("src");
+      imgB.style.display = "none";
+    }
   }
 
-  function openFileModal(title){
-    document.getElementById('fileTitle').textContent = title || 'Kamera / Foto';
-    document.getElementById('fileModal').classList.add('show');
-  }
-  function closeFileModal(){
-    document.getElementById('fileModal').classList.remove('show');
-    fallbackTarget = null;
-  }
+  if(doSave) saveSensitiveLocal();
+  updatePhaseLocks();
+}
 
-  async function startCapture(target){
-    camTarget = target;
-    if (isSecureCameraPossible()){
-      openCamModal(targetLabel(target));
-      try{
-        camFacing = 'environment';
-        await startCamStream();
-        return;
-      }catch(e){
-        closeCamModal();
-        stopCamStream();
+function rehydrateLocalForCurrentRecord(){
+  const recordId = document.getElementById("recordId").value.trim();
+  if(!recordId) return;
+  const local = loadSensitiveLocal(recordId);
+  if(!local) return;
+
+  if(!document.getElementById("customerName").value.trim() && local.customerName)
+    document.getElementById("customerName").value = local.customerName;
+
+  if(!document.getElementById("customerEmail").value.trim() && local.customerEmail)
+    document.getElementById("customerEmail").value = local.customerEmail;
+
+  if(!photos.id.front.dataUrl && local.idFront?.dataUrl) photos.id.front = local.idFront;
+  if(!photos.id.back.dataUrl && local.idBack?.dataUrl) photos.id.back = local.idBack;
+
+  syncIdPhotoUI(false);
+
+  // Signaturen nachziehen nur wenn Canvas leer
+  try{ if(sigPads.sigHCustomer?.isEmpty?.() && local.sigHCustomer) drawDataUrlOnCanvas("sigHCustomer", local.sigHCustomer); }catch(e){}
+  try{ if(sigPads.sigHStaff?.isEmpty?.() && local.sigHStaff) drawDataUrlOnCanvas("sigHStaff", local.sigHStaff); }catch(e){}
+  try{ if(sigPads.sigRCustomer?.isEmpty?.() && local.sigRCustomer) drawDataUrlOnCanvas("sigRCustomer", local.sigRCustomer); }catch(e){}
+  try{ if(sigPads.sigRStaff?.isEmpty?.() && local.sigRStaff) drawDataUrlOnCanvas("sigRStaff", local.sigRStaff); }catch(e){}
+
+  updateWorkflowLocks();
+  updateStatePill();
+  updatePhaseLocks();
+}
+
+function rehydrateNow(){
+  try{ rehydrateLocalForCurrentRecord(); }catch(e){}
+  try{ updateWorkflowLocks(); updateStatePill(); updatePhaseLocks(); }catch(e){}
+  try{
+    dlog("rehydrateNow", {
+      recordId: document.getElementById("recordId")?.value,
+      HcustEmpty: sigPads.sigHCustomer?.isEmpty?.(),
+      HstaffEmpty: sigPads.sigHStaff?.isEmpty?.(),
+      RcustEmpty: sigPads.sigRCustomer?.isEmpty?.(),
+      RstaffEmpty: sigPads.sigRStaff?.isEmpty?.()
+    });
+  }catch(e){}
+}
+
+/* Checklist model */
+function buildItems(phase, def){
+  return def.map(d=>({
+    phase,
+    cat:d.cat,
+    catId: slug(d.cat),
+    code:d.code,
+    id: phase+"-"+slug(d.cat)+"-"+d.code.toLowerCase(),
+    text:d.text,
+    requiresPhoto: !!d.requiresPhoto,
+    done:false,
+    note:"",
+    photoDataUrl:null,
+    photoName:null
+  }));
+}
+function groupByCategory(items){
+  const order = [];
+  const map = new Map();
+  for(const it of items){
+    if(!map.has(it.catId)){
+      map.set(it.catId,{ label:it.cat, items:[] });
+      order.push(it.catId);
+    }
+    map.get(it.catId).items.push(it);
+  }
+  return { order, map };
+}
+function findItem(phase, id){
+  const list = (phase==="handover") ? handoverItems : returnItems;
+  return list.find(x=>x.id===id);
+}
+function setItemDone(phase, id, val){
+  const it = findItem(phase, id);
+  if(!it) return;
+  it.done = !!val;
+  updatePhaseLocks();
+  updateCategoryProgressUI(phase);
+  maybeAutoOpenNextCategory(phase, it.catId);
+}
+function setItemNote(phase, id, val){
+  const it = findItem(phase, id);
+  if(!it) return;
+  it.note = val;
+}
+function renderChecklist(phase){
+  const wrap = document.getElementById(phase==="handover" ? "handoverChecklistWrap" : "returnChecklistWrap");
+  const items = (phase==="handover") ? handoverItems : returnItems;
+
+  const { order, map } = groupByCategory(items);
+  wrap.innerHTML = "";
+
+  order.forEach((catId, idx)=>{
+    const cat = map.get(catId);
+    const det = document.createElement("details");
+    det.dataset.phase = phase;
+    det.dataset.catId = catId;
+    det.open = (idx===0);
+
+    const sum = document.createElement("summary");
+    sum.innerHTML = `<span>${escapeHtml(cat.label)}</span>
+      <span class="sumRight">
+        <span class="sumProg" id="${phase}-prog-${catId}">0/0 erledigt</span>
+        <span class="pill" id="${phase}-pill-${catId}">Offen</span>
+      </span>`;
+    det.appendChild(sum);
+
+    const body = document.createElement("div");
+    body.className = "catBody";
+
+    cat.items.forEach(it=>{
+      const div = document.createElement("div");
+      div.className = "item";
+      const reqBadge = it.requiresPhoto ? `<span class="req">Foto Pflicht</span>` : "";
+      const photoInfo = it.photoName ? escapeHtml(it.photoName) : "";
+      div.innerHTML = `
+        <div class="itemTop">
+          <div>
+            <div class="itemTitle">${escapeHtml(it.code)} – ${escapeHtml(it.text)}</div>
+            <div class="tiny">${reqBadge}</div>
+          </div>
+          <div class="itemMeta">
+            <label class="chk">
+              <input type="checkbox" ${it.done ? "checked" : ""} onchange="setItemDone('${phase}','${it.id}', this.checked)">
+              <span>Erledigt</span>
+            </label>
+            <button type="button" onclick="startCapture({type:'item', phase:'${phase}', id:'${it.id}'})">Foto aufnehmen</button>
+            <button type="button" onclick="clearTargetPhoto({type:'item', phase:'${phase}', id:'${it.id}'})">Foto löschen</button>
+          </div>
+        </div>
+
+        <div class="tiny" id="${phase}-photoInfo-${it.id}">${photoInfo}</div>
+        <textarea placeholder="Notiz..." oninput="setItemNote('${phase}','${it.id}', this.value)">${escapeHtml(it.note)}</textarea>
+        <img id="${phase}-img-${it.id}" class="photoThumb" alt="Foto ${escapeHtml(it.code)}">
+      `;
+      body.appendChild(div);
+
+      const img = div.querySelector("img");
+      if(it.photoDataUrl){
+        img.src = it.photoDataUrl;
+        img.style.display = "block";
       }
-    }
-    fallbackTarget = target;
-    openFileModal(targetLabel(target));
-  }
+    });
 
-  async function switchCam(){
-    camFacing = camFacing==='environment' ? 'user' : 'environment';
-    await startCamStream();
-  }
-
-  function setTargetPhoto(target, dataUrl, name){
-    if (target.type==='id'){
-      photos.id[target.side].dataUrl = dataUrl;
-      photos.id[target.side].name = name;
-      syncIdPhotoUI(true);
-      return;
-    }
-    if (target.type==='item'){
-      const it = findItem(target.phase, target.id);
-      if (!it) return;
-      it.photoDataUrl = dataUrl;
-      it.photoName = name;
-      const info = document.getElementById(`${target.phase}_photoInfo_${it.id}`);
-      const img = document.getElementById(`${target.phase}_img_${it.id}`);
-      if (info) info.textContent = name || '—';
-      if (img){ img.src=dataUrl; img.style.display='block'; }
-      updatePhaseLocks();
-    }
-  }
-
-  function clearTargetPhoto(target){
-    if (target.type==='id'){
-      photos.id[target.side].dataUrl = null;
-      photos.id[target.side].name = null;
-      syncIdPhotoUI(true);
-      return;
-    }
-    if (target.type==='item'){
-      const it = findItem(target.phase, target.id);
-      if (!it) return;
-      it.photoDataUrl = null;
-      it.photoName = null;
-      const info = document.getElementById(`${target.phase}_photoInfo_${it.id}`);
-      const img = document.getElementById(`${target.phase}_img_${it.id}`);
-      if (info) info.textContent = '—';
-      if (img){ img.removeAttribute('src'); img.style.display='none'; }
-      updatePhaseLocks();
-    }
-  }
-
-  function captureCam(){
-    const v = document.getElementById('camVideo');
-    const c = document.getElementById('camCanvas');
-    if (!camTarget) return;
-
-    const w = v.videoWidth || 1280;
-    const h = v.videoHeight || 720;
-    const maxW = 1600;
-    const scale = Math.min(1, maxW / w);
-    const sw = Math.round(w * scale), sh = Math.round(h * scale);
-
-    c.width = sw; c.height = sh;
-    c.getContext('2d').drawImage(v, 0, 0, sw, sh);
-
-    const dataUrl = c.toDataURL('image/jpeg', 0.88);
-    const stamp = new Date().toISOString().slice(0,19).replace(/[T:]/g,'-');
-    const name = targetLabel(camTarget).replace(/\s+/g,'_') + '_' + stamp + '.jpg';
-
-    setTargetPhoto(camTarget, dataUrl, name);
-    closeCam();
-  }
-
-  function closeCam(){
-    stopCamStream();
-    closeCamModal();
-    camTarget = null;
-  }
-
-  document.getElementById('fallbackFile').addEventListener('change', async (e)=>{
-    const file = e.target.files && e.target.files[0];
-    e.target.value = '';
-    if (!file || !fallbackTarget) return;
-
-    const dataUrl = await fileToDataUrl(file);
-    const stamp = new Date().toISOString().slice(0,19).replace(/[T:]/g,'-');
-    const name = targetLabel(fallbackTarget).replace(/\s+/g,'_') + '_' + stamp + '.jpg';
-
-    setTargetPhoto(fallbackTarget, dataUrl, name);
-    fallbackTarget = null;
-    closeFileModal();
+    det.appendChild(body);
+    wrap.appendChild(det);
   });
 
-  // ===================== Validation =====================
-  function requireBaseFields(){
-    const ids = ['recordId','bookingRef','customerName','customerEmail'];
-    for(const id of ids){
-      const el = document.getElementById(id);
-      if (!el.checkValidity()){ el.reportValidity(); return false; }
+  updateCategoryProgressUI(phase);
+  updatePhaseLocks();
+}
+function updateCategoryProgressUI(phase){
+  const items = (phase==="handover") ? handoverItems : returnItems;
+  const { order, map } = groupByCategory(items);
+
+  order.forEach(catId=>{
+    const cat = map.get(catId);
+    const done = cat.items.filter(x=>x.done).length;
+    const total = cat.items.length;
+    const prog = document.getElementById(`${phase}-prog-${catId}`);
+    const pill = document.getElementById(`${phase}-pill-${catId}`);
+    if(prog) prog.textContent = `${done}/${total} erledigt`;
+    if(pill){
+      const allDone = (total>0 && done===total);
+      pill.textContent = allDone ? "Fertig" : "Offen";
+      pill.className = "pill " + (allDone ? "ok" : "");
     }
-    return true;
-  }
+  });
+}
+function maybeAutoOpenNextCategory(phase, catIdJustChanged){
+  const items = (phase==="handover") ? handoverItems : returnItems;
+  const { order, map } = groupByCategory(items);
 
-  function validatePhase(phase){
-    if (closedAt) return { ok:false, missing:['Vorgang ist geschlossen.'] };
-    if (!requireBaseFields()) return { ok:false, missing:['Bitte Stammdaten vervollständigen.'] };
+  const cat = map.get(catIdJustChanged);
+  if(!cat) return;
+  const catDone = (cat.items.length>0 && cat.items.every(x=>x.done));
+  if(!catDone) return;
 
-    const missing = [];
-    if (phase==='handover'){
-      const ids = ['handoverDate','handoverTime','idChecked','handoverNotes'];
-      for(const id of ids){
-        const el = document.getElementById(id);
-        if (!el.checkValidity()){ el.reportValidity(); return {ok:false, missing:['Bitte Pflichtfelder in der Übergabe ausfüllen.']}; }
-      }
-      if (!phaseReadyForSign('handover')) missing.push('Übergabe: Checkliste/Pflichtfotos noch nicht vollständig.');
-      if (sigPads.sigHCustomer.isEmpty()) missing.push('Übergabe: Unterschrift Kunde fehlt.');
-      if (sigPads.sigHStaff.isEmpty()) missing.push('Übergabe: Unterschrift Vermieter fehlt.');
+  const idx = order.indexOf(catIdJustChanged);
+  for(let i=idx+1;i<order.length;i++){
+    const nextId = order[i];
+    const nextCat = map.get(nextId);
+    const nextDone = (nextCat.items.length>0 && nextCat.items.every(x=>x.done));
+    if(!nextDone){
+      document.querySelectorAll(`details[data-phase="${phase}"]`).forEach(d=>{
+        if(d.dataset.catId===nextId) d.open = true;
+      });
+      break;
     }
-    if (phase==='return'){
-      rehydrateNow();
-      if (!handoverSigned()) missing.push('Rückgabe: Übergabe ist noch nicht unterschrieben.');
-      const ids = ['returnDate','returnTime'];
-      for(const id of ids){
-        const el = document.getElementById(id);
-        if (!el.checkValidity()){ el.reportValidity(); return {ok:false, missing:['Bitte Pflichtfelder in der Rückgabe ausfüllen.']}; }
-      }
-      if (!phaseReadyForSign('return')) missing.push('Rückgabe: Checkliste noch nicht vollständig.');
-      if (sigPads.sigRCustomer.isEmpty()) missing.push('Rückgabe: Unterschrift Gast fehlt.');
-      if (sigPads.sigRStaff.isEmpty()) missing.push('Rückgabe: Unterschrift Vermieter fehlt.');
+  }
+}
+function isChecklistComplete(phase){
+  const items = (phase==="handover") ? handoverItems : returnItems;
+  return items.length>0 && items.every(x=>x.done);
+}
+function requiredPhotosOk(phase){
+  const items = (phase==="handover") ? handoverItems : returnItems;
+  return items.filter(x=>x.requiresPhoto).every(x=>!!x.photoDataUrl);
+}
+function phaseReadyForSign(phase){
+  return isChecklistComplete(phase) && requiredPhotosOk(phase);
+}
+
+/* Signatures */
+function setupSignature(canvasId){
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext("2d",{ willReadFrequently:true });
+
+  function applyPen(){
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#0b2a3a";
+  }
+
+  function resize(keepDrawing=true){
+    let snap = null;
+    if(keepDrawing){
+      try{ snap = canvas.toDataURL("image/png"); }catch(e){ snap = null; }
     }
-    return { ok: missing.length===0, missing };
-  }
+    const rect = canvas.getBoundingClientRect();
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const newW = Math.max(1, Math.floor(rect.width * ratio));
+    const newH = Math.max(1, Math.floor(rect.height * ratio));
 
-  // ===================== Zentraler Datensatz (OHNE Kundendaten/Ausweis/Signaturen) =====================
-  function collectCentralRecord(){
-    const record_id = document.getElementById('recordId').value.trim();
-    const booking_ref = document.getElementById('bookingRef').value.trim();
-    const resource_id = document.getElementById('raftId').value.trim();
-
-    const handover = {
-      date: document.getElementById('handoverDate').value,
-      time: document.getElementById('handoverTime').value,
-      by: document.getElementById('handoverBy').value.trim(),
-      idChecked: document.getElementById('idChecked').value,
-      notes: document.getElementById('handoverNotes').value.trim(),
-      checklist: handoverItems
-    };
-
-    const ret = {
-      date: document.getElementById('returnDate').value,
-      time: document.getElementById('returnTime').value,
-      by: document.getElementById('returnBy').value.trim(),
-      notes: document.getElementById('returnNotes').value.trim(),
-      checklist: returnItems
-    };
-
-    return {
-      record_id,
-      booking_ref,
-      resource_id,
-      status: closedAt ? 'closed' : 'open',
-      handover,
-      return: ret,
-      updated_at: new Date().toISOString()
-    };
-  }
-
-  async function upsertCentralRecord(){
-    if(!await requireLogin()) return false;
-    const rec = collectCentralRecord();
-    if(!rec.record_id){ alert("Vorgangsnummer (recordId) fehlt."); return false; }
-
-    const { error } = await sb.from(TABLE_PROTOCOLS).upsert(rec, { onConflict: "record_id" });
-    if(error){ alert("Speichern fehlgeschlagen: " + error.message); return false; }
-    return true;
-  }
-
-  async function loadCentralRecord(recordId){
-    if(!await requireLogin()) return null;
-    const { data, error } = await sb.from(TABLE_PROTOCOLS).select("*").eq("record_id", recordId).maybeSingle();
-    if(error){ alert("Laden fehlgeschlagen: " + error.message); return null; }
-    return data;
-  }
-
-  // ===================== Save / Load UI =====================
-  async function savePhase(phase){
-    rehydrateNow();
-    const v = validatePhase(phase);
-    if (!v.ok){ alert("Bitte ergänzen:\n- " + v.missing.join("\n- ")); return; }
-
-    if (phase === 'return' && returnSigned()){
-      closedAt = new Date().toISOString();
+    if(canvas.width === newW && canvas.height === newH){
+      ctx.setTransform(ratio,0,0,ratio,0,0);
+      applyPen();
+      return;
     }
 
-    saveSensitiveLocal();
+    canvas.width = newW;
+    canvas.height = newH;
+    ctx.setTransform(ratio,0,0,ratio,0,0);
+    applyPen();
 
-    let centralOk = true;
-    try{
-      centralOk = await upsertCentralRecord();
-    }catch(e){
-      centralOk = false;
-    }
-
-    if(centralOk){
-      await refreshSaved();
-    }else{
-      alert("Hinweis: Zentral speichern ging gerade nicht. Mail/PDF wird trotzdem erstellt.");
-    }
-
-    updateWorkflowLocks(); updatePhaseLocks(); updateStatePill();
-
-    if (phase === 'return' && document.getElementById('autoEmailR').checked){ openEmailDraft('return'); }
-    if (phase === 'handover' && document.getElementById('autoEmailH').checked){ openEmailDraft('handover'); }
-
-    alert(phase==='handover' ? 'Übergabe gespeichert.' : (closedAt ? 'Rückgabe gespeichert. Vorgang geschlossen.' : 'Rückgabe gespeichert.'));
-  }
-
-  async function refreshSaved(){
-    if(!await requireLogin()) return;
-
-    const { data, error } = await sb
-      .from(TABLE_PROTOCOLS)
-      .select("record_id, booking_ref, resource_id, status, updated_at, created_at")
-      .order("updated_at", { ascending:false })
-      .limit(200);
-
-    const box = document.getElementById("savedList");
-    if(error){ box.textContent = "Fehler: " + error.message; return; }
-    if(!data || data.length===0){ box.textContent = "Noch keine zentral gespeicherten Vorgänge."; return; }
-
-    box.innerHTML = data.map(r => {
-      const when = r.updated_at ? new Date(r.updated_at).toLocaleString() : '';
-      const st = r.status === 'closed' ? 'Abgeschlossen' : 'Offen';
-      return `
-        <div style="margin:6px 0;">
-          <button type="button" class="ghost" onclick="openRecord('${escapeHtml(r.record_id)}')">Öffnen</button>
-          <span class="pill ${r.status==='closed'?'ok':''}">${escapeHtml(st)}</span>
-          <span class="tiny"> ${escapeHtml(r.record_id)} · Buchung: ${escapeHtml(r.booking_ref||'—')} · Floß: ${escapeHtml(r.resource_id||'—')} · ${escapeHtml(when)}</span>
-        </div>
-      `;
-    }).join("");
-  }
-
-  async function openRecord(recordId){
-    const central = await loadCentralRecord(recordId);
-    if(!central){ alert("Nicht gefunden: " + recordId); return; }
-
-    document.getElementById('recordId').value = central.record_id || recordId;
-    document.getElementById('bookingRef').value = central.booking_ref || '';
-    document.getElementById('raftId').value = central.resource_id || 'Aurora';
-
-    const h = central.handover || {};
-    document.getElementById('handoverDate').value = h.date || '';
-    document.getElementById('handoverTime').value = h.time || '';
-    document.getElementById('handoverBy').value = h.by || '';
-    document.getElementById('idChecked').value = h.idChecked || '';
-    document.getElementById('handoverNotes').value = h.notes || '';
-    handoverItems = (Array.isArray(h.checklist) && h.checklist.length>0) ? h.checklist : buildItems('handover', HANDOVER_DEFAULT);
-
-    const r = central.return || central["return"] || {};
-    document.getElementById('returnDate').value = r.date || '';
-    document.getElementById('returnTime').value = r.time || '';
-    document.getElementById('returnBy').value = r.by || '';
-    document.getElementById('returnNotes').value = r.notes || '';
-    returnItems = (Array.isArray(r.checklist) && r.checklist.length>0) ? r.checklist : buildItems('return', RETURN_DEFAULT);
-
-    closedAt = (central.status === 'closed') ? (central.updated_at || new Date().toISOString()) : null;
-
-    const local = loadSensitiveLocal(recordId);
-    sigPads.sigHCustomer.clear(); sigPads.sigHStaff.clear();
-    sigPads.sigRCustomer.clear(); sigPads.sigRStaff.clear();
-
-    if(local){
-      document.getElementById('customerName').value = local.customerName || '';
-      document.getElementById('customerEmail').value = local.customerEmail || '';
-      photos.id.front = local.idFront || {dataUrl:null,name:null};
-      photos.id.back = local.idBack || {dataUrl:null,name:null};
-      syncIdPhotoUI(false);
-
-      drawDataUrlOnCanvas('sigHCustomer', local.sigHCustomer);
-      drawDataUrlOnCanvas('sigHStaff', local.sigHStaff);
-      drawDataUrlOnCanvas('sigRCustomer', local.sigRCustomer);
-      drawDataUrlOnCanvas('sigRStaff', local.sigRStaff);
-    } else {
-      document.getElementById('customerName').value = '';
-      document.getElementById('customerEmail').value = '';
-      photos.id.front = {dataUrl:null,name:null};
-      photos.id.back = {dataUrl:null,name:null};
-      syncIdPhotoUI(false);
-    }
-
-    renderChecklist('handover');
-    renderChecklist('return');
-
-    updateWorkflowLocks(); updatePhaseLocks(); updateStatePill();
-    requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
-  }
-
-  async function clearSaved(){
-    if(!await requireLogin()) return;
-    const ok = confirm("Wirklich ALLE zentral gespeicherten Vorgänge löschen?");
-    if(!ok) return;
-
-    const { error } = await sb.from(TABLE_PROTOCOLS).delete().neq("record_id", "");
-    if(error){ alert("Löschen fehlgeschlagen: " + error.message); return; }
-
-    document.getElementById("savedList").textContent = "Gelöscht.";
-  }
-
-  function resetAll(){
-    closedAt = null;
-    recordIdLocked = false;
-
-    const ridEl = document.getElementById('recordId');
-    ridEl.removeAttribute('readonly');
-    ridEl.style.opacity = '';
-
-    document.getElementById('recordId').value = suggestRecordId();
-    document.getElementById('bookingRef').value = '';
-    document.getElementById('raftId').value = 'Aurora';
-
-    document.getElementById('customerName').value = '';
-    document.getElementById('customerEmail').value = '';
-    photos.id.front = {dataUrl:null,name:null};
-    photos.id.back = {dataUrl:null,name:null};
-    syncIdPhotoUI(true);
-
-    document.getElementById('handoverDate').value = nowLocalDate();
-    document.getElementById('handoverTime').value = nowLocalTime();
-    document.getElementById('handoverBy').value = '';
-    document.getElementById('idChecked').value = '';
-    document.getElementById('handoverNotes').value = '';
-
-    document.getElementById('returnDate').value = nowLocalDate();
-    document.getElementById('returnTime').value = nowLocalTime();
-    document.getElementById('returnBy').value = '';
-    document.getElementById('returnNotes').value = '';
-
-    handoverItems = buildItems('handover', HANDOVER_DEFAULT);
-    returnItems = buildItems('return', RETURN_DEFAULT);
-
-    sigPads.sigHCustomer.clear(); sigPads.sigHStaff.clear();
-    sigPads.sigRCustomer.clear(); sigPads.sigRStaff.clear();
-
-    saveSensitiveLocal();
-
-    renderChecklist('handover');
-    renderChecklist('return');
-    setMainTab('handover');
-
-    updateWorkflowLocks(); updatePhaseLocks(); updateStatePill();
-  }
-
-  // ===================== Email/PDF =====================
-  function mailSubjectForPhase(phase){
-    const ref = document.getElementById('bookingRef').value.trim();
-    return (phase==='return' ? 'Rückgabeprotokoll ' : 'Übergabeprotokoll ') + ref;
-  }
-  function mailBodyForPhase(phase){
-    const rid = document.getElementById('recordId').value.trim();
-    const raft = document.getElementById('raftId').value.trim() || 'Floß';
-    return [
-      'Warnow Moments',
-      (phase==='handover' ? 'Übergabeprotokoll' : 'Rückgabeprotokoll'),
-      '',
-      'Buchungsreferenz: ' + document.getElementById('bookingRef').value.trim(),
-      'Vorgang: ' + rid,
-      'Floß: ' + raft,
-      'Kunde: ' + document.getElementById('customerName').value.trim(),
-      '',
-      'Im Anhang finden Sie das vollständige Protokoll als PDF.'
-    ].join('\n');
-  }
-  function showPdfOverlay(on){ document.getElementById('pdfLoadingOverlay').classList.toggle('show', !!on); }
-
-  function guessImageFormat(dataUrl){
-    if(!dataUrl) return null;
-    if (String(dataUrl).startsWith('data:image/png')) return 'PNG';
-    return 'JPEG';
-  }
-  function getImageSize(dataUrl){
-    return new Promise((res,rej)=>{
+    if(snap){
       const img = new Image();
-      img.onload = ()=>res({w: img.naturalWidth || img.width, h: img.naturalHeight || img.height});
-      img.onerror = rej;
-      img.src = dataUrl;
-    });
+      img.onload = ()=>{
+        ctx.drawImage(img,0,0,rect.width,rect.height);
+      };
+      img.src = snap;
+    }
   }
-  async function addImageContain(pdf, dataUrl, format, x, y, boxW, boxH){
-    if(!dataUrl) return false;
-    try{
-      const {w, h} = await getImageSize(dataUrl);
-      if(!w || !h) return false;
-      const scale = Math.min(boxW / w, boxH / h);
-      const drawW = w * scale;
-      const drawH = h * scale;
-      const dx = x + (boxW - drawW)/2;
-      const dy = y + (boxH - drawH)/2;
-      pdf.addImage(dataUrl, format, dx, dy, drawW, drawH);
+
+  resize(true);
+  let resizeTimer = null;
+  window.addEventListener("resize", ()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(()=>resize(true),150);
+  });
+
+  let drawing = false;
+  let last = null;
+
+  function startAt(p){ drawing = true; last = p; }
+  function lineTo(p){
+    if(!drawing) return;
+    ctx.beginPath();
+    ctx.moveTo(last.x,last.y);
+    ctx.lineTo(p.x,p.y);
+    ctx.stroke();
+    last = p;
+  }
+  function end(){
+    drawing = false; last = null;
+    saveSensitiveLocal();
+    updateWorkflowLocks();
+    updateStatePill();
+    updatePhaseLocks();
+  }
+
+  canvas.addEventListener("pointerdown", e=>{ startAt({x:e.offsetX,y:e.offsetY}); e.preventDefault(); });
+  canvas.addEventListener("pointermove", e=>{ lineTo({x:e.offsetX,y:e.offsetY}); e.preventDefault(); });
+  canvas.addEventListener("pointerup", e=>{ end(); e.preventDefault(); });
+  canvas.addEventListener("pointercancel", e=>{ end(); e.preventDefault(); });
+
+  canvas.addEventListener("touchstart", e=>{
+    if(!e.touches?.[0]) return;
+    const r = canvas.getBoundingClientRect();
+    startAt({x:e.touches[0].clientX-r.left, y:e.touches[0].clientY-r.top});
+    e.preventDefault();
+  }, { passive:false });
+  canvas.addEventListener("touchmove", e=>{
+    if(!e.touches?.[0]) return;
+    const r = canvas.getBoundingClientRect();
+    lineTo({x:e.touches[0].clientX-r.left, y:e.touches[0].clientY-r.top});
+    e.preventDefault();
+  }, { passive:false });
+  canvas.addEventListener("touchend", e=>{ end(); e.preventDefault(); }, { passive:false });
+  canvas.addEventListener("touchcancel", e=>{ end(); e.preventDefault(); }, { passive:false });
+
+  return {
+    resize,
+    clear: ()=>{
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+    },
+    dataUrl: ()=>canvas.toDataURL("image/png"),
+    isEmpty: ()=>{
+      const img = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+      for(let i=0;i<img.length;i+=4){
+        const r = img[i], g = img[i+1], b = img[i+2], a = img[i+3];
+        if(a>20 && (r<245 || g<245 || b<245)) return false;
+      }
       return true;
+    }
+  };
+}
+function clearSig(id){
+  sigPads[id]?.clear();
+  saveSensitiveLocal();
+  updateWorkflowLocks();
+  updateStatePill();
+  updatePhaseLocks();
+}
+
+/* Workflow locks / state */
+function handoverSigned(){
+  const customer = !sigPads.sigHCustomer.isEmpty();
+  const staff = !sigPads.sigHStaff.isEmpty();
+  return customer && staff;
+}
+function returnSigned(){
+  const customer = !sigPads.sigRCustomer.isEmpty();
+  const staff = !sigPads.sigRStaff.isEmpty();
+  return customer && staff;
+}
+function updateWorkflowLocks(){
+  const locked = !handoverSigned();
+
+  document.getElementById("returnLockedBanner").style.display = locked ? "block" : "none";
+  document.getElementById("handoverSignedBanner").style.display = locked ? "none" : "block";
+  document.getElementById("closedBanner").style.display = closedAt ? "block" : "none";
+  document.getElementById("closedInfo").textContent = closedAt ? ("Geschlossen am " + new Date(closedAt).toLocaleString()) : "";
+}
+function updateStatePill(){
+  const pill = document.getElementById("statePill");
+  if(closedAt){
+    pill.textContent = "Abgeschlossen";
+    pill.className = "pill ok";
+    return;
+  }
+  if(returnSigned()){
+    pill.textContent = "Rückgabe unterschrieben";
+    pill.className = "pill ok";
+    return;
+  }
+  if(handoverSigned()){
+    pill.textContent = "Übergabe unterschrieben";
+    pill.className = "pill ok";
+    return;
+  }
+  pill.textContent = "In Bearbeitung";
+  pill.className = "pill";
+}
+function updatePhaseLocks(){
+  const hReady = phaseReadyForSign("handover");
+  document.getElementById("handoverSigBox").classList.toggle("sigLocked", !hReady);
+  document.getElementById("handoverSigLockMsg").textContent = hReady
+    ? "Checkliste vollständig – bitte jetzt unterschreiben."
+    : "Bitte erst Übergabe-Checkliste vollständig erledigen (inkl. Pflichtfotos), dann unterschreiben.";
+
+  const rReady = phaseReadyForSign("return") && handoverSigned();
+  document.getElementById("returnSigBox").classList.toggle("sigLocked", !rReady);
+
+  // Wichtig: Rückgabe ist erst abschließbar, wenn Übergabe unterschrieben ist (lokal gespeichert).
+  document.getElementById("returnSigLockMsg").textContent = rReady
+    ? "Checkliste vollständig – bitte jetzt unterschreiben."
+    : (!handoverSigned()
+      ? "Übergabe ist noch nicht unterschrieben – Rückgabe-Unterschrift ist gesperrt. Bitte erst Übergabe unterschreiben."
+      : "Bitte erst Rückgabe-Checkliste vollständig erledigen, dann unterschreiben.");
+
+  updateWorkflowLocks();
+  updateStatePill();
+}
+
+/* Tabs */
+function setMainTab(which){
+  mainTab = which;
+  document.getElementById("tabH").setAttribute("aria-selected", which==="handover");
+  document.getElementById("tabR").setAttribute("aria-selected", which==="return");
+  document.getElementById("paneH").style.display = which==="handover" ? "block" : "none";
+  document.getElementById("paneR").style.display = which==="return" ? "block" : "none";
+
+  try{ sigPads.sigHCustomer?.resize?.(true); }catch(e){}
+  try{ sigPads.sigHStaff?.resize?.(true); }catch(e){}
+  try{ sigPads.sigRCustomer?.resize?.(true); }catch(e){}
+  try{ sigPads.sigRStaff?.resize?.(true); }catch(e){}
+
+  requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
+  updateWorkflowLocks();
+  updateStatePill();
+  updatePhaseLocks();
+}
+function scrollToEnd(){
+  const el = document.getElementById(mainTab==="handover" ? "handoverEnd" : "returnEnd");
+  if(el) el.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* Kamera / Foto */
+function openCamModal(title){
+  document.getElementById("camTitle").textContent = title || "Kamera";
+  document.getElementById("camModal").classList.add("show");
+}
+function closeCamModal(){ document.getElementById("camModal").classList.remove("show"); }
+function stopCamStream(){
+  if(camStream){
+    camStream.getTracks().forEach(t=>t.stop());
+    camStream = null;
+  }
+  const v = document.getElementById("camVideo");
+  if(v) v.srcObject = null;
+}
+async function startCamStream(){
+  stopCamStream();
+  const v = document.getElementById("camVideo");
+  const constraints = { audio:false, video:{ facingMode:{ ideal: camFacing }, width:{ideal:1920}, height:{ideal:1080} } };
+  camStream = await navigator.mediaDevices.getUserMedia(constraints);
+  v.srcObject = camStream;
+  await v.play();
+}
+function targetLabel(t){
+  if(t.type==="id") return (t.side==="front") ? "Ausweis Vorderseite" : "Ausweis Rückseite";
+  if(t.type==="item"){
+    const it = findItem(t.phase, t.id);
+    const code = it ? it.code : t.id;
+    return (t.phase==="handover" ? "Übergabe" : "Rückgabe") + " Foto " + code;
+  }
+  return "Foto";
+}
+function openFileModal(title){
+  document.getElementById("fileTitle").textContent = title || "Kamera / Foto";
+  document.getElementById("fileModal").classList.add("show");
+}
+function closeFileModal(){
+  document.getElementById("fileModal").classList.remove("show");
+  fallbackTarget = null;
+}
+async function startCapture(target){
+  camTarget = target;
+
+  if(isSecureCameraPossible()){
+    openCamModal(targetLabel(target));
+    try{
+      camFacing = "environment";
+      await startCamStream();
+      return;
     }catch(e){
+      closeCamModal();
+      stopCamStream();
+    }
+  }
+
+  fallbackTarget = target;
+  openFileModal(targetLabel(target));
+}
+async function switchCam(){
+  camFacing = (camFacing==="environment") ? "user" : "environment";
+  await startCamStream();
+}
+function setTargetPhoto(target, dataUrl, name){
+  if(target.type==="id"){
+    photos.id[target.side].dataUrl = dataUrl;
+    photos.id[target.side].name = name;
+    syncIdPhotoUI(true);
+    return;
+  }
+  if(target.type==="item"){
+    const it = findItem(target.phase, target.id);
+    if(!it) return;
+    it.photoDataUrl = dataUrl;
+    it.photoName = name;
+    const info = document.getElementById(`${target.phase}-photoInfo-${it.id}`);
+    const img = document.getElementById(`${target.phase}-img-${it.id}`);
+    if(info) info.textContent = name;
+    if(img){ img.src = dataUrl; img.style.display = "block"; }
+    updatePhaseLocks();
+  }
+}
+function clearTargetPhoto(target){
+  if(target.type==="id"){
+    photos.id[target.side].dataUrl = null;
+    photos.id[target.side].name = null;
+    syncIdPhotoUI(true);
+    return;
+  }
+  if(target.type==="item"){
+    const it = findItem(target.phase, target.id);
+    if(!it) return;
+    it.photoDataUrl = null;
+    it.photoName = null;
+    const info = document.getElementById(`${target.phase}-photoInfo-${it.id}`);
+    const img = document.getElementById(`${target.phase}-img-${it.id}`);
+    if(info) info.textContent = "";
+    if(img){ img.removeAttribute("src"); img.style.display="none"; }
+    updatePhaseLocks();
+  }
+}
+function captureCam(){
+  const v = document.getElementById("camVideo");
+  const c = document.getElementById("camCanvas");
+  if(!camTarget) return;
+
+  const w = v.videoWidth || 1280;
+  const h = v.videoHeight || 720;
+  const maxW = 1600;
+  const scale = Math.min(1, maxW / w);
+  const sw = Math.round(w * scale);
+  const sh = Math.round(h * scale);
+
+  c.width = sw; c.height = sh;
+  c.getContext("2d").drawImage(v,0,0,sw,sh);
+
+  const dataUrl = c.toDataURL("image/jpeg", 0.88);
+  const stamp = new Date().toISOString().slice(0,19).replace("T","_").replace(/:/g,"-");
+  const name = targetLabel(camTarget).replace(/\s+/g,"_")+"_"+stamp+".jpg";
+
+  setTargetPhoto(camTarget, dataUrl, name);
+  closeCam();
+}
+function closeCam(){
+  stopCamStream();
+  closeCamModal();
+  camTarget = null;
+}
+document.getElementById("fallbackFile").addEventListener("change", async (e)=>{
+  const file = e.target.files?.[0];
+  e.target.value = "";
+  if(!file || !fallbackTarget) return;
+
+  const dataUrl = await fileToDataUrl(file);
+  const stamp = new Date().toISOString().slice(0,19).replace("T","_").replace(/:/g,"-");
+  const name = targetLabel(fallbackTarget).replace(/\s+/g,"_")+"_"+stamp+".jpg";
+  setTargetPhoto(fallbackTarget, dataUrl, name);
+
+  fallbackTarget = null;
+  closeFileModal();
+});
+
+/* Validation */
+function requireBaseFields(){
+  const ids = ["recordId","bookingRef","customerName","customerEmail"];
+  for(const id of ids){
+    const el = document.getElementById(id);
+    if(!el.checkValidity()){
+      el.reportValidity();
       return false;
     }
   }
+  return true;
+}
 
-  async function generatePdfBlob(phase){
-    if (!window.jspdf?.jsPDF){ alert('PDF-Bibliothek jsPDF konnte nicht geladen werden.'); return null; }
-    showPdfOverlay(true);
-    try{
-      const jsPDF = window.jspdf.jsPDF;
-      const pdf = new jsPDF('p','mm','a4');
+function validatePhase(phase){
+  if(closedAt) return { ok:false, missing:["Vorgang ist geschlossen."] };
+  if(!requireBaseFields()) return { ok:false, missing:["Bitte Stammdaten vervollständigen."] };
 
-      const recordId = document.getElementById('recordId').value.trim();
-      const customerName = document.getElementById('customerName').value.trim();
-      const raftId = document.getElementById('raftId').value.trim();
-      const bookingRef = document.getElementById('bookingRef').value.trim();
-      const title = (phase === 'handover') ? 'Übergabeprotokoll' : 'Rückgabeprotokoll';
+  const missing = [];
 
-      let y = 16;
-      pdf.setTextColor(11,42,58);
-      pdf.setFontSize(16);
-      pdf.setFont(undefined, 'bold');
-      pdf.text('Warnow Moments – ' + title, 105, y, {align:'center'});
-      y += 10;
-
-      pdf.setFontSize(11);
-      pdf.setFont(undefined, 'normal');
-      pdf.setTextColor(11,18,32);
-      pdf.text('Buchungsreferenz: ' + bookingRef, 20, y); y += 6;
-      pdf.text('Vorgang: ' + recordId, 20, y); y += 6;
-      pdf.text('Floß: ' + raftId, 20, y); y += 6;
-      pdf.text('Kunde: ' + customerName, 20, y); y += 8;
-
-      pdf.setFont(undefined, 'bold');
-      pdf.text('Hinweise', 20, y); y += 6;
-      pdf.setFont(undefined, 'normal');
-
-      const notes = (phase==='handover')
-        ? document.getElementById('handoverNotes').value.trim()
-        : document.getElementById('returnNotes').value.trim();
-
-      const noteLines = pdf.splitTextToSize(notes || '—', 170);
-      pdf.text(noteLines, 20, y);
-      y += Math.min(60, noteLines.length * 5) + 6;
-
-      if (phase === 'handover'){
-        if (y > 230){ pdf.addPage(); y = 16; }
-        pdf.setFont(undefined, 'bold');
-        pdf.text('Ausweis-Fotos (lokal)', 20, y); y += 6;
-        pdf.setFont(undefined, 'normal');
-
-        const fmtF = guessImageFormat(photos.id.front.dataUrl) || 'JPEG';
-        const fmtB = guessImageFormat(photos.id.back.dataUrl) || 'JPEG';
-
-        const boxW = 80, boxH = 50;
-        const x1 = 20, x2 = 110;
-        pdf.text('Vorderseite:', x1, y);
-        pdf.text('Rückseite:', x2, y);
-        y += 4;
-
-        await addImageContain(pdf, photos.id.front.dataUrl, fmtF, x1, y, boxW, boxH);
-        await addImageContain(pdf, photos.id.back.dataUrl, fmtB, x2, y, boxW, boxH);
-        y += boxH + 8;
-      }
-
-      pdf.setFont(undefined, 'bold');
-      pdf.text('Checkliste', 20, y); y += 6;
-      pdf.setFont(undefined, 'normal');
-
-      const items = (phase==='handover') ? handoverItems : returnItems;
-      const doneCount = items.filter(i=>i.done).length;
-      pdf.text(`Erledigt: ${doneCount}/${items.length}`, 20, y); y += 6;
-
-      for (const it of items){
-        if (y > 270){ pdf.addPage(); y = 16; }
-
-        const mark = it.done ? '[x]' : '[ ]';
-        const line = `${mark} ${it.code} – ${it.text}`;
-        const lines = pdf.splitTextToSize(line, 170);
-        pdf.setTextColor(11,18,32);
-        pdf.text(lines, 20, y);
-        y += lines.length * 5;
-
-        if (it.note){
-          const nlines = pdf.splitTextToSize('Notiz: ' + it.note, 170);
-          pdf.setTextColor(60,72,96);
-          pdf.text(nlines, 20, y);
-          y += nlines.length * 5;
-        }
-
-        if (it.photoDataUrl){
-          const fmt = guessImageFormat(it.photoDataUrl) || 'JPEG';
-          const boxW = 120, boxH = 70;
-          if (y + boxH > 280){ pdf.addPage(); y = 16; }
-          pdf.setTextColor(11,18,32);
-          pdf.text('Foto: ' + (it.photoName || ''), 20, y); y += 4;
-          await addImageContain(pdf, it.photoDataUrl, fmt, 20, y, boxW, boxH);
-          y += boxH + 6;
-        } else {
-          y += 2;
-        }
-      }
-
-      if (y > 240){ pdf.addPage(); y = 16; }
-      pdf.setFont(undefined, 'bold');
-      pdf.setTextColor(11,42,58);
-      pdf.text('Unterschriften (lokal)', 20, y); y += 6;
-      pdf.setFont(undefined, 'normal');
-      pdf.setTextColor(11,18,32);
-
-      const sigW = 80, sigH = 35;
-      const sig1x = 20, sig2x = 110;
-
-      let s1 = null, s2 = null, s3 = null, s4 = null;
-      try{ s1 = sigPads.sigHCustomer.isEmpty() ? null : sigPads.sigHCustomer.dataUrl(); }catch{}
-      try{ s2 = sigPads.sigHStaff.isEmpty() ? null : sigPads.sigHStaff.dataUrl(); }catch{}
-      try{ s3 = sigPads.sigRCustomer.isEmpty() ? null : sigPads.sigRCustomer.dataUrl(); }catch{}
-      try{ s4 = sigPads.sigRStaff.isEmpty() ? null : sigPads.sigRStaff.dataUrl(); }catch{}
-
-      pdf.text('Übergabe Kunde:', sig1x, y);
-      pdf.text('Übergabe Vermieter:', sig2x, y);
-      y += 4;
-      if(s1) await addImageContain(pdf, s1, 'PNG', sig1x, y, sigW, sigH);
-      if(s2) await addImageContain(pdf, s2, 'PNG', sig2x, y, sigW, sigH);
-      y += sigH + 10;
-
-      pdf.text('Rückgabe Gast:', sig1x, y);
-      pdf.text('Rückgabe Vermieter:', sig2x, y);
-      y += 4;
-      if(s3) await addImageContain(pdf, s3, 'PNG', sig1x, y, sigW, sigH);
-      if(s4) await addImageContain(pdf, s4, 'PNG', sig2x, y, sigW, sigH);
-      y += sigH + 6;
-
-      return pdf.output('blob');
-    } finally {
-      showPdfOverlay(false);
-    }
-  }
-
-  async function openEmailDraft(phase){
-    try{ saveSensitiveLocal(); }catch(e){}
-    try{ rehydrateNow(); }catch(e){}
-
-    const to = document.getElementById('customerEmail').value.trim();
-    if (!to){
-      alert("Bitte E-Mail des Kunden eintragen.");
-      document.getElementById('customerEmail').focus();
-      return;
-    }
-
-    const subject = mailSubjectForPhase(phase);
-    const body = mailBodyForPhase(phase);
-
-    let blob = null;
-    try{
-      blob = await generatePdfBlob(phase);
-    }catch(e){
-      blob = null;
-    }
-
-    if (!blob){
-      const mailtoUrl =
-        `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.location.href = mailtoUrl;
-      return;
-    }
-
-    const safeName = subject.replace(/[^a-zA-Z0-9-_]+/g, '_') + '.pdf';
-    const file = new File([blob], safeName, { type: 'application/pdf' });
-
-    const canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [file] }));
-    if (canShareFiles){
-      try{
-        await navigator.share({ files: [file], title: subject, text: body });
-        return;
-      }catch(e){
-        // ignore
+  if(phase==="handover"){
+    const ids = ["handoverDate","handoverTime","idChecked","handoverNotes"];
+    for(const id of ids){
+      const el = document.getElementById(id);
+      if(!el.checkValidity()){
+        el.reportValidity();
+        return { ok:false, missing:["Bitte Pflichtfelder in der Übergabe ausfüllen."] };
       }
     }
-
-    const mailtoUrl =
-      `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nHinweis: Ein PDF-Anhang ist in diesem Modus nicht automatisch möglich. Bitte PDF manuell anhängen (Download/Dateien).")}`;
-    window.location.href = mailtoUrl;
-
-    setTimeout(()=>{
-      try{
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = safeName;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(()=>URL.revokeObjectURL(url), 1500);
-      }catch(e){}
-    }, 900);
+    if(!phaseReadyForSign("handover")) missing.push("Übergabe: Checkliste/Pflichtfotos noch nicht vollständig.");
+    if(sigPads.sigHCustomer.isEmpty()) missing.push("Übergabe: Unterschrift Kunde fehlt.");
+    if(sigPads.sigHStaff.isEmpty()) missing.push("Übergabe: Unterschrift Vermieter fehlt.");
   }
 
-  function updateShareStatus(){
-    const el = document.getElementById('shareStatus');
-    if(!el) return;
-    try{
-      const testFile = new File(['x'], 'test.pdf', {type:'application/pdf'});
-      const ok = !!(navigator.canShare && navigator.canShare({ files:[testFile] }));
-      el.textContent = ok
-        ? 'Anhang möglich: Ja (Teilen → Mail).'
-        : 'Anhang möglich: Nein (Download + manuell anhängen).';
-    }catch{
-      el.textContent = '';
+  if(phase==="return"){
+    rehydrateNow();
+
+    // HARTE REGEL: Rückgabe kann NUR abgeschlossen werden, wenn Übergabe unterschrieben ist (lokal).
+    if(!handoverSigned()) missing.push("Rückgabe: Übergabe ist noch nicht unterschrieben (lokal).");
+
+    const ids = ["returnDate","returnTime"];
+    for(const id of ids){
+      const el = document.getElementById(id);
+      if(!el.checkValidity()){
+        el.reportValidity();
+        return { ok:false, missing:["Bitte Pflichtfelder in der Rückgabe ausfüllen."] };
+      }
     }
+    if(!phaseReadyForSign("return")) missing.push("Rückgabe: Checkliste/Pflichtfotos noch nicht vollständig.");
+    if(sigPads.sigRCustomer.isEmpty()) missing.push("Rückgabe: Unterschrift Gast fehlt.");
+    if(sigPads.sigRStaff.isEmpty()) missing.push("Rückgabe: Unterschrift Vermieter fehlt.");
   }
 
-  // ===================== Init =====================
-  async function init(){
-    setNetStatus();
+  return { ok: missing.length===0, missing };
+}
 
-    sigPads.sigHCustomer = setupSignature('sigHCustomer');
-    sigPads.sigHStaff = setupSignature('sigHStaff');
-    sigPads.sigRCustomer = setupSignature('sigRCustomer');
-    sigPads.sigRStaff = setupSignature('sigRStaff');
+/* Zentraler Datensatz OHNE Kundendaten/Ausweis/Signaturen */
+function collectCentralRecord(){
+  const recordid = document.getElementById("recordId").value.trim();
+  const bookingref = document.getElementById("bookingRef").value.trim();
+  const resourceid = document.getElementById("raftId").value.trim();
 
-    handoverItems = buildItems('handover', HANDOVER_DEFAULT);
-    returnItems = buildItems('return', RETURN_DEFAULT);
+  const handover = {
+    date: document.getElementById("handoverDate").value,
+    time: document.getElementById("handoverTime").value,
+    by: document.getElementById("handoverBy").value.trim(),
+    idChecked: document.getElementById("idChecked").value,
+    notes: document.getElementById("handoverNotes").value.trim(),
+    checklist: handoverItems
+  };
 
-    renderChecklist('handover');
-    renderChecklist('return');
+  const ret = {
+    date: document.getElementById("returnDate").value,
+    time: document.getElementById("returnTime").value,
+    by: document.getElementById("returnBy").value.trim(),
+    notes: document.getElementById("returnNotes").value.trim(),
+    checklist: returnItems
+  };
 
-    document.getElementById('recordId').value = suggestRecordId();
-    document.getElementById('handoverDate').value = nowLocalDate();
-    document.getElementById('handoverTime').value = nowLocalTime();
-    document.getElementById('returnDate').value = nowLocalDate();
-    document.getElementById('returnTime').value = nowLocalTime();
+  return {
+    recordid,
+    bookingref,
+    resourceid,
+    status: closedAt ? "closed" : "open",
+    handover,
+    return: ret,
+    updatedat: new Date().toISOString()
+  };
+}
+async function upsertCentralRecord(){
+  if(!await requireLogin()) return false;
+  const rec = collectCentralRecord();
+  if(!rec.recordid){
+    alert("Vorgangsnummer (recordId) fehlt.");
+    return false;
+  }
+  const { error } = await sb.from(TABLE_PROTOCOLS).upsert(rec, { onConflict:"recordid" });
+  if(error){
+    alert("Speichern fehlgeschlagen: " + error.message);
+    return false;
+  }
+  return true;
+}
+async function loadCentralRecord(recordId){
+  if(!await requireLogin()) return null;
+  const { data, error } = await sb.from(TABLE_PROTOCOLS).select("*").eq("recordid", recordId).maybeSingle();
+  if(error){
+    alert("Laden fehlgeschlagen: " + error.message);
+    return null;
+  }
+  return data;
+}
 
+/* Save / Load UI */
+async function savePhase(phase){
+  rehydrateNow();
+
+  const v = validatePhase(phase);
+  if(!v.ok){
+    alert("Bitte ergänzen:\n- " + v.missing.join("\n- "));
+    return;
+  }
+
+  // Wenn Rückgabe gespeichert wird und unterschrieben ist -> schließen.
+  if(phase==="return" && returnSigned()){
+    closedAt = new Date().toISOString();
+  }
+
+  saveSensitiveLocal();
+
+  let centralOk = true;
+  try{ centralOk = await upsertCentralRecord(); }
+  catch(e){ centralOk = false; }
+
+  if(centralOk) await refreshSaved();
+  else alert("Hinweis: Zentral speichern ging gerade nicht. PDF/Mail ist trotzdem möglich.");
+
+  updateWorkflowLocks();
+  updatePhaseLocks();
+  updateStatePill();
+
+  // NEU: "Übergabe speichern" dient NUR dem Speichern (keine Auto-Mail).
+  // NEU: Auch bei Rückgabe speichern/abschließen keine Auto-Mail, sondern nur optionales PDF-Angebot.
+  if(phase==="handover"){
+    alert("Übergabe gespeichert.");
+    return;
+  }
+
+  // phase==="return"
+  if(closedAt){
+    // Beim Abschließen Rückgabe: PDF erzeugen + zum Teilen/Anhängen anbieten
+    await offerPdfAfterClose("return");
+    alert("Rückgabe gespeichert. Vorgang geschlossen.");
+  }else{
+    alert("Rückgabe gespeichert.");
+  }
+}
+
+async function refreshSaved(){
+  if(!await requireLogin()) return;
+  const { data, error } = await sb
+    .from(TABLE_PROTOCOLS)
+    .select("recordid, bookingref, resourceid, status, updatedat, createdat")
+    .order("updatedat", { ascending:false })
+    .limit(200);
+
+  const box = document.getElementById("savedList");
+  if(error){ box.textContent = "Fehler: " + error.message; return; }
+  if(!data || data.length===0){ box.textContent = "Noch keine zentral gespeicherten Vorgänge."; return; }
+
+  box.innerHTML = data.map(r=>{
+    const when = r.updatedat ? new Date(r.updatedat).toLocaleString() : "";
+    const st = (r.status==="closed") ? "Abgeschlossen" : "Offen";
+    return `
+      <div style="margin:6px 0;">
+        <button type="button" class="ghost" onclick="openRecord('${escapeHtml(r.recordid)}')">Öffnen</button>
+        <span class="pill ${r.status==="closed" ? "ok" : ""}">${escapeHtml(st)}</span>
+        <span class="tiny">${escapeHtml(r.recordid)} · Buchung ${escapeHtml(r.bookingref)} · Floß ${escapeHtml(r.resourceid)} · ${escapeHtml(when)}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+async function openRecord(recordId){
+  const central = await loadCentralRecord(recordId);
+  if(!central){ alert("Nicht gefunden (recordId)."); return; }
+
+  document.getElementById("recordId").value = central.recordid || recordId;
+  document.getElementById("bookingRef").value = central.bookingref || "";
+  document.getElementById("raftId").value = central.resourceid || "Aurora";
+
+  const h = central.handover || {};
+  document.getElementById("handoverDate").value = h.date || "";
+  document.getElementById("handoverTime").value = h.time || "";
+  document.getElementById("handoverBy").value = h.by || "";
+  document.getElementById("idChecked").value = h.idChecked || "";
+  document.getElementById("handoverNotes").value = h.notes || "";
+  handoverItems = (Array.isArray(h.checklist) && h.checklist.length>0) ? h.checklist : buildItems("handover", HANDOVER_DEFAULT);
+
+  const r = central.return || {};
+  document.getElementById("returnDate").value = r.date || "";
+  document.getElementById("returnTime").value = r.time || "";
+  document.getElementById("returnBy").value = r.by || "";
+  document.getElementById("returnNotes").value = r.notes || "";
+  returnItems = (Array.isArray(r.checklist) && r.checklist.length>0) ? r.checklist : buildItems("return", RETURN_DEFAULT);
+
+  closedAt = (central.status==="closed") ? (central.updatedat || new Date().toISOString()) : null;
+
+  // Lokal sensible Daten laden
+  const local = loadSensitiveLocal(recordId);
+
+  sigPads.sigHCustomer.clear();
+  sigPads.sigHStaff.clear();
+  sigPads.sigRCustomer.clear();
+  sigPads.sigRStaff.clear();
+
+  if(local){
+    document.getElementById("customerName").value = local.customerName || "";
+    document.getElementById("customerEmail").value = local.customerEmail || "";
+
+    photos.id.front = local.idFront || {dataUrl:null,name:null};
+    photos.id.back  = local.idBack  || {dataUrl:null,name:null};
     syncIdPhotoUI(false);
-    updateWorkflowLocks(); updatePhaseLocks(); updateStatePill();
-    updateShareStatus();
 
-    window.addEventListener('pageshow', ()=>requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow)));
-    window.addEventListener('pagehide', ()=>{ try{ saveSensitiveLocal(); }catch(e){} });
-    window.addEventListener('focus', ()=>requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow)));
-    document.addEventListener('visibilitychange', ()=>{
-      if(!document.hidden) requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
-    });
+    drawDataUrlOnCanvas("sigHCustomer", local.sigHCustomer);
+    drawDataUrlOnCanvas("sigHStaff", local.sigHStaff);
+    drawDataUrlOnCanvas("sigRCustomer", local.sigRCustomer);
+    drawDataUrlOnCanvas("sigRStaff", local.sigRStaff);
+  }else{
+    document.getElementById("customerName").value = "";
+    document.getElementById("customerEmail").value = "";
+    photos.id.front = {dataUrl:null,name:null};
+    photos.id.back  = {dataUrl:null,name:null};
+    syncIdPhotoUI(false);
+  }
 
-    // recordId guard: wenn User recordId ändert obwohl Signaturen existieren -> verhindern
-    const ridEl = document.getElementById('recordId');
-    ridEl.addEventListener('input', ()=>{
-      if(recordIdLocked){
-        // readonly sollte es verhindern; zur Sicherheit UI stabil halten
-        ridEl.value = ridEl.value;
+  renderChecklist("handover");
+  renderChecklist("return");
+
+  updateWorkflowLocks();
+  updatePhaseLocks();
+  updateStatePill();
+
+  requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
+}
+
+async function clearSaved(){
+  if(!await requireLogin()) return;
+  const ok = confirm("Wirklich ALLE zentral gespeicherten Vorgänge löschen?");
+  if(!ok) return;
+  const { error } = await sb.from(TABLE_PROTOCOLS).delete().neq("recordid","");
+  if(error){ alert("Löschen fehlgeschlagen: " + error.message); return; }
+  document.getElementById("savedList").textContent = "Gelöscht.";
+}
+
+/* Reset */
+function resetAll(){
+  closedAt = null;
+  recordIdLocked = false;
+  const ridEl = document.getElementById("recordId");
+  ridEl.removeAttribute("readonly");
+  ridEl.style.opacity = "";
+
+  document.getElementById("recordId").value = suggestRecordId();
+  document.getElementById("bookingRef").value = "";
+  document.getElementById("raftId").value = "Aurora";
+  document.getElementById("customerName").value = "";
+  document.getElementById("customerEmail").value = "";
+
+  photos.id.front = {dataUrl:null,name:null};
+  photos.id.back  = {dataUrl:null,name:null};
+  syncIdPhotoUI(true);
+
+  document.getElementById("handoverDate").value = nowLocalDate();
+  document.getElementById("handoverTime").value = nowLocalTime();
+  document.getElementById("handoverBy").value = "";
+  document.getElementById("idChecked").value = "";
+  document.getElementById("handoverNotes").value = "";
+
+  document.getElementById("returnDate").value = nowLocalDate();
+  document.getElementById("returnTime").value = nowLocalTime();
+  document.getElementById("returnBy").value = "";
+  document.getElementById("returnNotes").value = "";
+
+  handoverItems = buildItems("handover", HANDOVER_DEFAULT);
+  returnItems   = buildItems("return", RETURN_DEFAULT);
+
+  sigPads.sigHCustomer.clear();
+  sigPads.sigHStaff.clear();
+  sigPads.sigRCustomer.clear();
+  sigPads.sigRStaff.clear();
+
+  saveSensitiveLocal();
+  renderChecklist("handover");
+  renderChecklist("return");
+  setMainTab("handover");
+  updateWorkflowLocks();
+  updatePhaseLocks();
+  updateStatePill();
+}
+
+/* Email/PDF */
+function mailSubjectForPhase(phase){
+  // NEU: Betreff soll die Buchungsreferenz sein
+  return document.getElementById("bookingRef").value.trim();
+}
+function mailBodyForPhase(phase){
+  const rid = document.getElementById("recordId").value.trim();
+  const raft = document.getElementById("raftId").value.trim();
+  const kind = (phase==="handover") ? "Übergabeprotokoll" : "Rückgabeprotokoll";
+  return [
+    "Warnow Moments – " + kind,
+    "",
+    "Buchungsreferenz: " + document.getElementById("bookingRef").value.trim(),
+    "Vorgang: " + rid,
+    "Floß: " + raft,
+    "Kunde: " + document.getElementById("customerName").value.trim(),
+    "",
+    "Im Anhang finden Sie das vollständige Protokoll als PDF."
+  ].join("\n");
+}
+
+function showPdfOverlay(on){
+  document.getElementById("pdfLoadingOverlay").classList.toggle("show", !!on);
+}
+function guessImageFormat(dataUrl){
+  if(!dataUrl) return null;
+  if(String(dataUrl).startsWith("data:image/png")) return "PNG";
+  return "JPEG";
+}
+function getImageSize(dataUrl){
+  return new Promise((res,rej)=>{
+    const img = new Image();
+    img.onload = ()=>res({ w: img.naturalWidth || img.width, h: img.naturalHeight || img.height });
+    img.onerror = rej;
+    img.src = dataUrl;
+  });
+}
+async function addImageContain(pdf, dataUrl, format, x, y, boxW, boxH){
+  if(!dataUrl) return false;
+  try{
+    const { w, h } = await getImageSize(dataUrl);
+    if(!w || !h) return false;
+    const scale = Math.min(boxW / w, boxH / h);
+    const drawW = w * scale;
+    const drawH = h * scale;
+    const dx = x + (boxW - drawW)/2;
+    const dy = y + (boxH - drawH)/2;
+    pdf.addImage(dataUrl, format, dx, dy, drawW, drawH);
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+async function generatePdfBlob(phase){
+  if(!window.jspdf?.jsPDF){
+    alert("PDF-Bibliothek (jsPDF) konnte nicht geladen werden.");
+    return null;
+  }
+
+  showPdfOverlay(true);
+  try{
+    const jsPDF = window.jspdf.jsPDF;
+    const pdf = new jsPDF("p","mm","a4");
+
+    const recordId = document.getElementById("recordId").value.trim();
+    const customerName = document.getElementById("customerName").value.trim();
+    const raftId = document.getElementById("raftId").value.trim();
+    const bookingRef = document.getElementById("bookingRef").value.trim();
+
+    const title = (phase==="handover") ? "Übergabeprotokoll" : "Rückgabeprotokoll";
+    let y = 16;
+
+    pdf.setTextColor(11,42,58);
+    pdf.setFontSize(16);
+    pdf.setFont(undefined, "bold");
+    pdf.text("Warnow Moments – " + title, 105, y, { align:"center" });
+    y += 10;
+
+    pdf.setFontSize(11);
+    pdf.setFont(undefined, "normal");
+    pdf.setTextColor(11,18,32);
+    pdf.text("Buchungsreferenz: " + bookingRef, 20, y); y += 6;
+    pdf.text("Vorgang: " + recordId, 20, y); y += 6;
+    pdf.text("Floß: " + raftId, 20, y); y += 6;
+    pdf.text("Kunde: " + customerName, 20, y); y += 8;
+
+    pdf.setFont(undefined, "bold");
+    pdf.setTextColor(11,42,58);
+    pdf.text("Hinweise", 20, y); y += 6;
+
+    pdf.setFont(undefined, "normal");
+    pdf.setTextColor(11,18,32);
+    const notes = (phase==="handover") ? document.getElementById("handoverNotes").value.trim() : document.getElementById("returnNotes").value.trim();
+    const noteLines = pdf.splitTextToSize(notes || "-", 170);
+    pdf.text(noteLines, 20, y);
+    y += Math.min(60, noteLines.length * 5 + 6);
+
+    if(phase==="handover"){
+      if(y > 230){ pdf.addPage(); y = 16; }
+      pdf.setFont(undefined, "bold");
+      pdf.setTextColor(11,42,58);
+      pdf.text("Ausweis-Fotos (lokal)", 20, y); y += 6;
+
+      pdf.setFont(undefined, "normal");
+      pdf.setTextColor(11,18,32);
+      const fmtF = guessImageFormat(photos.id.front.dataUrl) || "JPEG";
+      const fmtB = guessImageFormat(photos.id.back.dataUrl) || "JPEG";
+      const boxW = 80, boxH = 50;
+      const x1 = 20, x2 = 110;
+
+      pdf.text("Vorderseite", x1, y);
+      pdf.text("Rückseite", x2, y);
+      y += 4;
+
+      await addImageContain(pdf, photos.id.front.dataUrl, fmtF, x1, y, boxW, boxH);
+      await addImageContain(pdf, photos.id.back.dataUrl, fmtB, x2, y, boxW, boxH);
+      y += boxH + 8;
+    }
+
+    pdf.setFont(undefined, "bold");
+    pdf.setTextColor(11,42,58);
+    pdf.text("Checkliste", 20, y); y += 6;
+
+    pdf.setFont(undefined, "normal");
+    pdf.setTextColor(11,18,32);
+    const items = (phase==="handover") ? handoverItems : returnItems;
+    const doneCount = items.filter(ii=>ii.done).length;
+    pdf.text("Erledigt: " + doneCount + "/" + items.length, 20, y); y += 6;
+
+    for(const it of items){
+      if(y > 270){ pdf.addPage(); y = 16; }
+      const mark = it.done ? "x" : " ";
+      const line = "["+mark+"] " + it.code + " – " + it.text;
+      const lines = pdf.splitTextToSize(line, 170);
+      pdf.setTextColor(11,18,32);
+      pdf.text(lines, 20, y);
+      y += lines.length * 5;
+
+      if(it.note){
+        const nlines = pdf.splitTextToSize("Notiz: " + it.note, 170);
+        pdf.setTextColor(60,72,96);
+        pdf.text(nlines, 20, y);
+        y += nlines.length * 5;
       }
-    });
 
-    const { data } = await sb.auth.getSession();
-    if(data.session){
-      document.getElementById("authStatus").textContent = "Eingeloggt.";
-      await refreshSaved();
+      if(it.photoDataUrl){
+        const fmt = guessImageFormat(it.photoDataUrl) || "JPEG";
+        const boxW = 120, boxH = 70;
+        if(y + boxH > 280){ pdf.addPage(); y = 16; }
+        pdf.setTextColor(11,18,32);
+        pdf.text("Foto: " + (it.photoName || ""), 20, y); y += 4;
+        await addImageContain(pdf, it.photoDataUrl, fmt, 20, y, boxW, boxH);
+        y += boxH + 6;
+      }else{
+        y += 2;
+      }
+    }
+
+    if(y > 240){ pdf.addPage(); y = 16; }
+    pdf.setFont(undefined, "bold");
+    pdf.setTextColor(11,42,58);
+    pdf.text("Unterschriften (lokal)", 20, y); y += 6;
+
+    pdf.setFont(undefined, "normal");
+    pdf.setTextColor(11,18,32);
+
+    const sigW = 80, sigH = 35;
+    const sig1x = 20, sig2x = 110;
+
+    let s1=null, s2=null, s3=null, s4=null;
+    try{ s1 = sigPads.sigHCustomer.isEmpty() ? null : sigPads.sigHCustomer.dataUrl(); }catch(e){}
+    try{ s2 = sigPads.sigHStaff.isEmpty() ? null : sigPads.sigHStaff.dataUrl(); }catch(e){}
+    try{ s3 = sigPads.sigRCustomer.isEmpty() ? null : sigPads.sigRCustomer.dataUrl(); }catch(e){}
+    try{ s4 = sigPads.sigRStaff.isEmpty() ? null : sigPads.sigRStaff.dataUrl(); }catch(e){}
+
+    pdf.text("Übergabe Kunde", sig1x, y);
+    pdf.text("Übergabe Vermieter", sig2x, y);
+    y += 4;
+    if(s1) await addImageContain(pdf, s1, "PNG", sig1x, y, sigW, sigH);
+    if(s2) await addImageContain(pdf, s2, "PNG", sig2x, y, sigW, sigH);
+    y += sigH + 10;
+
+    pdf.text("Rückgabe Gast", sig1x, y);
+    pdf.text("Rückgabe Vermieter", sig2x, y);
+    y += 4;
+    if(s3) await addImageContain(pdf, s3, "PNG", sig1x, y, sigW, sigH);
+    if(s4) await addImageContain(pdf, s4, "PNG", sig2x, y, sigW, sigH);
+    y += sigH + 6;
+
+    return pdf.output("blob");
+  } finally {
+    showPdfOverlay(false);
+  }
+}
+
+/* NEU: "Mailen (+ PDF)" öffnet nur Mail, übernimmt To + Betreff=Buchungsreferenz, PDF als Anhang via Share wenn möglich */
+async function openEmailDraft(phase){
+  try{ saveSensitiveLocal(); }catch(e){}
+  try{ rehydrateNow(); }catch(e){}
+
+  const to = document.getElementById("customerEmail").value.trim();
+  if(!to){
+    alert("Bitte E-Mail des Kunden eintragen.");
+    document.getElementById("customerEmail").focus();
+    return;
+  }
+
+  const subject = mailSubjectForPhase(phase);
+  if(!subject){
+    alert("Bitte Buchungsreferenz eintragen (für Betreff).");
+    document.getElementById("bookingRef").focus();
+    return;
+  }
+
+  const body = mailBodyForPhase(phase);
+
+  let blob = null;
+  try{ blob = await generatePdfBlob(phase); }catch(e){ blob = null; }
+
+  // Wenn PDF nicht erzeugbar: mailto ohne Anhang
+  if(!blob){
+    const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+    return;
+  }
+
+  const safeName = (subject || "protokoll").replace(/[^a-zA-Z0-9-_]+/g,"_") + ".pdf";
+  const file = new File([blob], safeName, { type:"application/pdf" });
+  const canShareFiles = !!navigator.canShare && navigator.canShare({ files:[file] });
+
+  if(canShareFiles){
+    try{
+      await navigator.share({ files:[file], title: subject, text: body });
+      return;
+    }catch(e){
+      // fall through
     }
   }
 
-  init();
-</script>
+  // Fallback: mailto + Download (manuell anhängen)
+  const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nHinweis: PDF-Anhang bitte aus Download/Dateien manuell anhängen.")}`;
+  window.location.href = mailtoUrl;
 
+  setTimeout(()=>{
+    try{
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = safeName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1500);
+    }catch(e){}
+  }, 900);
+}
+
+/* NEU: Nach dem Schließen (Rückgabe) PDF anbieten (ohne automatisch Mail zu öffnen) */
+async function offerPdfAfterClose(phase){
+  try{ saveSensitiveLocal(); }catch(e){}
+  try{ rehydrateNow(); }catch(e){}
+
+  let blob = null;
+  try{ blob = await generatePdfBlob(phase); }catch(e){ blob = null; }
+  if(!blob) return;
+
+  const subject = mailSubjectForPhase(phase) || "protokoll";
+  const safeName = subject.replace(/[^a-zA-Z0-9-_]+/g,"_") + ".pdf";
+  const file = new File([blob], safeName, { type:"application/pdf" });
+
+  const canShareFiles = !!navigator.canShare && navigator.canShare({ files:[file] });
+  if(canShareFiles){
+    try{
+      await navigator.share({ files:[file], title: subject, text: "PDF-Protokoll (Anhang)" });
+      return;
+    }catch(e){
+      // ignore
+    }
+  }
+
+  // Fallback Download
+  try{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = safeName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }catch(e){}
+}
+
+function updateShareStatus(){
+  const el = document.getElementById("shareStatus");
+  if(!el) return;
+  try{
+    const testFile = new File(["x"], "test.pdf", { type:"application/pdf" });
+    const ok = !!navigator.canShare && navigator.canShare({ files:[testFile] });
+    el.textContent = ok ? "Anhang möglich: Ja (Teilen → Mail)." : "Anhang möglich: Nein (Download manuell anhängen).";
+  }catch(e){
+    el.textContent = "";
+  }
+}
+
+/* Init */
+async function init(){
+  setNetStatus();
+
+  sigPads.sigHCustomer = setupSignature("sigHCustomer");
+  sigPads.sigHStaff    = setupSignature("sigHStaff");
+  sigPads.sigRCustomer = setupSignature("sigRCustomer");
+  sigPads.sigRStaff    = setupSignature("sigRStaff");
+
+  handoverItems = buildItems("handover", HANDOVER_DEFAULT);
+  returnItems   = buildItems("return", RETURN_DEFAULT);
+
+  renderChecklist("handover");
+  renderChecklist("return");
+
+  document.getElementById("recordId").value = suggestRecordId();
+  document.getElementById("handoverDate").value = nowLocalDate();
+  document.getElementById("handoverTime").value = nowLocalTime();
+  document.getElementById("returnDate").value = nowLocalDate();
+  document.getElementById("returnTime").value = nowLocalTime();
+
+  syncIdPhotoUI(false);
+  updateWorkflowLocks();
+  updatePhaseLocks();
+  updateStatePill();
+  updateShareStatus();
+
+  window.addEventListener("pageshow", ()=>requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow)));
+  window.addEventListener("pagehide", ()=>{ try{ saveSensitiveLocal(); }catch(e){} });
+  window.addEventListener("focus", ()=>requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow)));
+  document.addEventListener("visibilitychange", ()=>{
+    if(!document.hidden) requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
+  });
+
+  // recordId guard: wenn Übergabe-Signaturen existieren, darf recordId nicht geändert werden
+  const ridEl = document.getElementById("recordId");
+  ridEl.addEventListener("input", ()=>{
+    if(recordIdLocked){
+      ridEl.value = ridEl.value; // stabilisieren
+    }
+  });
+
+  const data = await sb.auth.getSession();
+  if(data.session){
+    document.getElementById("authStatus").textContent = "Eingeloggt.";
+    await refreshSaved();
+  }
+}
+
+init();
+</script>
 </body>
 </html>
