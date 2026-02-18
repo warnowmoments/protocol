@@ -152,8 +152,8 @@
 
       <div class="row cols3">
         <div>
-          <label>Vorgangsnummer (recordId) * (zentraler Schlüssel)</label>
-          <input id="recordId" type="text" required/>
+          <label>Vorgangsnummer (record_id) * (zentraler Schlüssel)</label>
+          <input id="record_id" type="text" required/>
         </div>
         <div>
           <label>Kunde (Name) * (nur lokal)</label>
@@ -388,7 +388,7 @@ let camFacing = "environment";
 let camTarget = null;
 let fallbackTarget = null;
 const sigPads = {};
-let recordIdLocked = false;
+let record_idLocked = false;
 
 /* Busy + Auth gate */
 let busy = false;
@@ -533,10 +533,10 @@ function anyHandoverSigPresent(){
   catch(e){ return false; }
 }
 function lockRecordIdIfNeeded(){
-  if(recordIdLocked) return;
+  if(record_idLocked) return;
   if(anyHandoverSigPresent()){
-    recordIdLocked = true;
-    const el = document.getElementById("recordId");
+    record_idLocked = true;
+    const el = document.getElementById("record_id");
     if(el){
       el.setAttribute("readonly","readonly");
       el.style.opacity = "0.9";
@@ -544,10 +544,10 @@ function lockRecordIdIfNeeded(){
   }
 }
 function saveSensitiveLocal(){
-  const recordId = document.getElementById("recordId").value.trim();
-  if(!recordId) return;
+  const record_id = document.getElementById("record_id").value.trim();
+  if(!record_id) return;
   const map = getLocalMap();
-  map[recordId] = {
+  map[record_id] = {
     customerName: document.getElementById("customerName").value.trim(),
     customerEmail: document.getElementById("customerEmail").value.trim(),
     idFront: photos.id.front,
@@ -560,9 +560,9 @@ function saveSensitiveLocal(){
   setLocalMap(map);
   lockRecordIdIfNeeded();
 }
-function loadSensitiveLocal(recordId){
+function loadSensitiveLocal(record_id){
   const map = getLocalMap();
-  return map[recordId] || null;
+  return map[record_id] || null;
 }
 function drawDataUrlOnCanvas(canvasId, dataUrl){
   if(!dataUrl) return;
@@ -602,9 +602,9 @@ function syncIdPhotoUI(doSave=true){
   updatePhaseLocks();
 }
 function rehydrateLocalForCurrentRecord(){
-  const recordId = document.getElementById("recordId").value.trim();
-  if(!recordId) return;
-  const local = loadSensitiveLocal(recordId);
+  const record_id = document.getElementById("record_id").value.trim();
+  if(!record_id) return;
+  const local = loadSensitiveLocal(record_id);
   if(!local) return;
 
   if(!document.getElementById("customerName").value.trim() && local.customerName)
@@ -1084,7 +1084,7 @@ document.getElementById("fallbackFile").addEventListener("change", async (e)=>{
 
 /* Validation */
 function requireBaseFields(){
-  const ids = ["recordId","bookingRef","customerName","customerEmail"];
+  const ids = ["record_id","bookingRef","customerName","customerEmail"];
   for(const id of ids){
     const el = document.getElementById(id);
     if(!el.checkValidity()){
@@ -1123,7 +1123,7 @@ function validatePhase(phase){
 /* Central record: ONLY write columns that typically exist */
 function collectCentralRecordMinimal(){
   return {
-    recordid: document.getElementById("recordId").value.trim(),
+    record_id: document.getElementById("record_id").value.trim(),
     status: closedAt ? "closed" : "open",
     updatedat: new Date().toISOString()
   };
@@ -1131,10 +1131,10 @@ function collectCentralRecordMinimal(){
 async function upsertCentralRecord(){
   if(!isAuthed) return false;
   const rec = collectCentralRecordMinimal();
-  if(!rec.recordid) return false;
+  if(!rec.record_id) return false;
 
-  // Wichtig: KEINE payload/payload/bookingref Spalten mehr
-  const { error } = await sb.from(TABLE_PROTOCOLS).upsert(rec, { onConflict:"recordid" });
+  // Wichtig: KEINE payload/bookingref Spalten mehr
+  const { error } = await sb.from(TABLE_PROTOCOLS).upsert(rec, { onConflict:"record_id" });
   if(error){
     alert("Speichern fehlgeschlagen: " + error.message);
     return false;
@@ -1143,7 +1143,7 @@ async function upsertCentralRecord(){
 }
 async function loadCentralRecord(recordId){
   if(!isAuthed) return null;
-  const { data, error } = await sb.from(TABLE_PROTOCOLS).select("recordid, status, updatedat").eq("recordid", recordId).maybeSingle();
+  const { data, error } = await sb.from(TABLE_PROTOCOLS).select("record_id, status, updatedat").eq("record_id", recordId).maybeSingle();
   if(error){ alert("Laden fehlgeschlagen: " + error.message); return null; }
   return data;
 }
@@ -1179,7 +1179,7 @@ async function refreshSaved(){
   if(!isAuthed) return;
   const { data, error } = await sb
     .from(TABLE_PROTOCOLS)
-    .select("recordid, status, updatedat")
+    .select("record_id, status, updatedat")
     .order("updatedat", { ascending:false })
     .limit(200);
 
@@ -1192,9 +1192,9 @@ async function refreshSaved(){
     const st = (r.status==="closed") ? "Abgeschlossen" : "Offen";
     return `
       <div style="margin:6px 0;">
-        <button type="button" class="ghost" onclick="openRecord('${escapeHtml(r.recordid)}')">Öffnen</button>
+        <button type="button" class="ghost" onclick="openRecord('${escapeHtml(r.record_id)}')">Öffnen</button>
         <span class="pill ${r.status==="closed" ? "ok" : ""}">${escapeHtml(st)}</span>
-        <span class="tiny">${escapeHtml(r.recordid)} · ${escapeHtml(when)}</span>
+        <span class="tiny">${escapeHtml(r.record_id)} · ${escapeHtml(when)}</span>
       </div>
     `;
   }).join("");
@@ -1204,7 +1204,7 @@ async function openRecord(recordId){
 
   // Zentral gibt es nur Minimaldaten; Details bleiben lokal (wie gewünscht/sensibel)
   const central = await loadCentralRecord(recordId);
-  document.getElementById("recordId").value = recordId;
+  document.getElementById("record_id").value = recordId;
 
   closedAt = (central?.status==="closed") ? (central.updatedat || new Date().toISOString()) : null;
 
@@ -1236,7 +1236,7 @@ async function clearSaved(){
   if(!isAuthed) return;
   const ok = confirm("Wirklich ALLE zentral gespeicherten Vorgänge löschen?");
   if(!ok) return;
-  const { error } = await sb.from(TABLE_PROTOCOLS).delete().neq("recordid","");
+  const { error } = await sb.from(TABLE_PROTOCOLS).delete().neq("record_id","");
   if(error){ alert("Löschen fehlgeschlagen: " + error.message); return; }
   document.getElementById("savedList").textContent = "Gelöscht.";
 }
@@ -1245,12 +1245,12 @@ async function clearSaved(){
 function resetAll(){
   if(!isAuthed) return;
   closedAt = null;
-  recordIdLocked = false;
-  const ridEl = document.getElementById("recordId");
+  record_idLocked = false;
+  const ridEl = document.getElementById("record_id");
   ridEl.removeAttribute("readonly");
   ridEl.style.opacity = "";
 
-  document.getElementById("recordId").value = suggestRecordId();
+  document.getElementById("record_id").value = suggestRecordId();
   document.getElementById("bookingRef").value = "";
   document.getElementById("raftId").value = "Aurora";
   document.getElementById("customerName").value = "";
@@ -1290,7 +1290,7 @@ function resetAll(){
 /* PDF + Mail */
 function mailSubject(){ return (document.getElementById("bookingRef").value.trim() || "Protokoll"); }
 function mailBody(phase){
-  const rid = document.getElementById("recordId").value.trim();
+  const rid = document.getElementById("record_id").value.trim();
   const raft = document.getElementById("raftId").value.trim();
   const kind = (phase==="handover") ? "Übergabeprotokoll" : "Rückgabeprotokoll";
   return [
@@ -1346,7 +1346,7 @@ async function generatePdfBlob(phase){
     const jsPDF = window.jspdf.jsPDF;
     const pdf = new jsPDF("p","mm","a4");
 
-    const recordId = document.getElementById("recordId").value.trim();
+    const recordId = document.getElementById("record_id").value.trim();
     const customerName = document.getElementById("customerName").value.trim();
     const raftId = document.getElementById("raftId").value.trim();
     const bookingRef = document.getElementById("bookingRef").value.trim();
@@ -1556,7 +1556,7 @@ async function init(){
   renderChecklist("handover");
   renderChecklist("return");
 
-  document.getElementById("recordId").value = suggestRecordId();
+  document.getElementById("record_id").value = suggestRecordId();
   document.getElementById("handoverDate").value = nowLocalDate();
   document.getElementById("handoverTime").value = nowLocalTime();
   document.getElementById("returnDate").value = nowLocalDate();
