@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-  <title>Warnow Moments Übergabe Rückgabe – Aurora v14.7</title>
+  <title>Warnow Moments Übergabe Rückgabe – Aurora v14.8</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -12,313 +12,91 @@
     :root{
       --wmNavy:#0b2a3a; --wmNavy2:#081f2b; --wmGold:#c9933b; --wmGold2:#d7a657;
       --bg1:#f7f9ff; --bg2:#eef3ff; --card:#ffffff; --txt:#0b1220; --muted:#4a5a7a;
-      --line:#d7e0f2; --btn1:#1d4ed8; --btn2:#0b1220; --ok:#16a34a; --bad:#dc2626;
+      --line:#d7e0f2; --btn2:#0b1220; --ok:#16a34a;
       --input:#ffffff; --ctlH:40px; --ctlGap:10px;
       --font-base:-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif;
       box-sizing:border-box;
     }
     *{ box-sizing:border-box; }
-    body{
-      margin:0;
-      font-family:var(--font-base);
-      background:linear-gradient(180deg,var(--bg1),var(--bg2));
-      color:var(--txt);
-    }
-    .topbar{
-      background:linear-gradient(90deg, var(--wmNavy2), var(--wmNavy));
-      color:#fff; padding:12px 0;
-      border-bottom:3px solid rgba(201,147,59,.35);
-    }
-    .topbarInner{
-      max-width:1180px; margin:0 auto; padding:0 12px;
-      display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-    }
+    body{ margin:0; font-family:var(--font-base); background:linear-gradient(180deg,var(--bg1),var(--bg2)); color:var(--txt); }
+    .topbar{ background:linear-gradient(90deg, var(--wmNavy2), var(--wmNavy)); color:#fff; padding:12px 0; border-bottom:3px solid rgba(201,147,59,.35); }
+    .topbarInner{ max-width:1180px; margin:0 auto; padding:0 12px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .brand{ display:flex; align-items:center; gap:12px; min-width:280px; }
-    .brand img{
-      width:150px; max-width:42vw; height:auto; display:block;
-      background:transparent; border-radius:8px; padding:6px;
-    }
+    .brand img{ width:150px; max-width:42vw; height:auto; display:block; background:transparent; border-radius:8px; padding:6px; }
     .brandTitle{ display:flex; flex-direction:column; gap:2px; }
     .brandTitle h1{ margin:0; font-size:18px; letter-spacing:.2px; color:#fff; line-height:1.1; }
     .brandTitle .sub{ font-size:12px; color:rgba(255,255,255,.75); }
-
     .wrap{ max-width:1180px; margin:14px auto; padding:0 12px 44px; }
-    .card{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:14px;
-      box-shadow:0 10px 26px rgba(17,24,39,.07);
-    }
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; box-shadow:0 10px 26px rgba(17,24,39,.07); }
     .sectionTitle{ font-size:14px; margin:0 0 10px; color:var(--wmNavy); }
     .row{ display:grid; grid-template-columns:1fr; gap:10px; }
-    @media (min-width:740px){
-      .row.cols2{ grid-template-columns:1fr 1fr; }
-      .row.cols3{ grid-template-columns:1fr 1fr 1fr; }
-    }
+    @media (min-width:740px){ .row.cols2{ grid-template-columns:1fr 1fr; } .row.cols3{ grid-template-columns:1fr 1fr 1fr; } }
     label{ font-size:12px; color:var(--muted); display:block; margin-bottom:6px; font-family:var(--font-base); }
-    input, textarea, select{
-      width:100%;
-      padding:10px 10px;
-      border-radius:10px;
-      background:var(--input);
-      border:1px solid var(--line);
-      color:var(--txt);
-      outline:none;
-      font-family:var(--font-base);
-      font-size:14px;
-    }
+    input, textarea, select{ width:100%; padding:10px 10px; border-radius:10px; background:var(--input); border:1px solid var(--line); color:var(--txt); outline:none; font-family:var(--font-base); font-size:14px; }
     textarea{ min-height:72px; resize:vertical; }
-
     .btns{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     button{
-      border:1px solid var(--line);
-      background:#fff;
-      color:var(--btn2);
-      border-radius:10px;
-      cursor:pointer;
-      height:var(--ctlH);
-      min-height:var(--ctlH);
-      padding:0 12px;
-      display:inline-flex; align-items:center; justify-content:center;
-      line-height:1;
-      white-space:nowrap;
-      font-family:var(--font-base);
-      font-size:14px;
+      border:1px solid var(--line); background:#fff; color:var(--btn2); border-radius:10px; cursor:pointer;
+      height:var(--ctlH); min-height:var(--ctlH); padding:0 12px; display:inline-flex; align-items:center; justify-content:center;
+      line-height:1; white-space:nowrap; font-family:var(--font-base); font-size:14px;
     }
-    button.primary{
-      background:linear-gradient(180deg, #2563eb, #1d4ed8);
-      border-color:#1e40af;
-      color:#fff;
-    }
-    button.wm{
-      background:linear-gradient(180deg, var(--wmGold2), var(--wmGold));
-      border-color:rgba(0,0,0,.08);
-      color:#1b1b1b;
-      font-weight:700;
-    }
-    button.danger{
-      border-color:#fecaca;
-      background:#fff1f2;
-      color:#991b1b;
-    }
-    button.ghost{
-      background:transparent;
-      border-color:var(--line);
-    }
+    button.primary{ background:linear-gradient(180deg, #2563eb, #1d4ed8); border-color:#1e40af; color:#fff; }
+    button.wm{ background:linear-gradient(180deg, var(--wmGold2), var(--wmGold)); border-color:rgba(0,0,0,.08); color:#1b1b1b; font-weight:700; }
+    button.danger{ border-color:#fecaca; background:#fff1f2; color:#991b1b; }
+    button.ghost{ background:transparent; border-color:var(--line); }
     button[disabled]{ opacity:.6; cursor:not-allowed; }
-
     .tiny{ font-size:12px; color:var(--muted); }
-    .pill{
-      display:inline-block;
-      padding:4px 8px;
-      border-radius:999px;
-      border:1px solid var(--line);
-      background:#fff;
-      font-size:12px;
-      color:var(--muted);
-    }
+    .pill{ display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; color:var(--muted); }
     .pill.ok{ border-color:#bbf7d0; color:#166534; background:#f0fdf4; }
-
     .tabs{ display:flex; gap:10px; flex-wrap:wrap; margin:10px 0; }
     .tabBtn[aria-selected="true"]{ background:#e8efff; border-color:#bcd0ff; }
-
-    details{
-      border:1px solid var(--line);
-      border-radius:12px;
-      background:#fff;
-      overflow:hidden;
-    }
-    summary{
-      cursor:pointer;
-      padding:10px 12px;
-      font-weight:750;
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      color:var(--wmNavy);
-    }
+    details{ border:1px solid var(--line); border-radius:12px; background:#fff; overflow:hidden; }
+    summary{ cursor:pointer; padding:10px 12px; font-weight:750; display:flex; justify-content:space-between; gap:10px; color:var(--wmNavy); }
     .catBody{ padding:10px 12px 12px; border-top:1px solid var(--line); }
     .sumRight{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .sumProg{ font-size:12px; color:var(--muted); font-weight:600; }
-
-    .item{
-      border:1px solid var(--line);
-      border-radius:12px;
-      padding:10px;
-      background:#f9fbff;
-      margin-bottom:10px;
-    }
+    .item{ border:1px solid var(--line); border-radius:12px; padding:10px; background:#f9fbff; margin-bottom:10px; }
     .itemTop{ display:grid; grid-template-columns:1fr; gap:10px; }
-    @media (min-width:740px){
-      .itemTop{ grid-template-columns:1fr auto; align-items:start; }
-      .itemMeta{ flex-wrap:nowrap; }
-    }
+    @media (min-width:740px){ .itemTop{ grid-template-columns:1fr auto; align-items:start; } .itemMeta{ flex-wrap:nowrap; } }
     .itemTitle{ font-weight:750; color:var(--wmNavy); }
-    .itemMeta{
-      display:flex;
-      gap:var(--ctlGap);
-      align-items:stretch;
-      flex-wrap:wrap;
-      justify-content:flex-start;
-      align-self:stretch;
-    }
-    .req{
-      font-size:11px;
-      color:#991b1b;
-      border:1px solid #fecaca;
-      background:#fff1f2;
-      padding:2px 6px;
-      border-radius:999px;
-    }
-    .chk{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      border:1px solid var(--line);
-      background:#fff;
-      border-radius:10px;
-      height:var(--ctlH);
-      min-height:var(--ctlH);
-      padding:0 12px;
-      line-height:1;
-      white-space:nowrap;
-      margin:0;
-    }
+    .itemMeta{ display:flex; gap:var(--ctlGap); align-items:stretch; flex-wrap:wrap; justify-content:flex-start; align-self:stretch; }
+    .req{ font-size:11px; color:#991b1b; border:1px solid #fecaca; background:#fff1f2; padding:2px 6px; border-radius:999px; }
+    .chk{ display:inline-flex; align-items:center; gap:8px; border:1px solid var(--line); background:#fff; border-radius:10px; height:var(--ctlH); min-height:var(--ctlH); padding:0 12px; line-height:1; white-space:nowrap; margin:0; }
     .chk input{ width:auto; margin:0; }
-
-    .photoThumb{
-      width:100%;
-      max-height:190px;
-      object-fit:contain;
-      margin-top:8px;
-      border:1px solid var(--line);
-      border-radius:10px;
-      background:#fff;
-      display:none;
-    }
-
-    .sigBox{
-      border:1px dashed rgba(11,42,58,.35);
-      border-radius:12px;
-      padding:10px;
-      background:linear-gradient(180deg, #f5f9ff, #ffffff);
-    }
-    canvas.sig{
-      width:100%;
-      height:170px;
-      background:#ffffff;
-      border:1px solid var(--line);
-      border-radius:10px;
-      touch-action:none;
-      -webkit-user-select:none;
-      user-select:none;
-    }
+    .photoThumb{ width:100%; max-height:190px; object-fit:contain; margin-top:8px; border:1px solid var(--line); border-radius:10px; background:#fff; display:none; }
+    .sigBox{ border:1px dashed rgba(11,42,58,.35); border-radius:12px; padding:10px; background:linear-gradient(180deg, #f5f9ff, #ffffff); }
+    canvas.sig{ width:100%; height:170px; background:#ffffff; border:1px solid var(--line); border-radius:10px; touch-action:none; -webkit-user-select:none; user-select:none; }
     .sigLocked{ opacity:.55; }
     .sigLocked canvas{ pointer-events:none; }
-
-    .bannerWarn{
-      border:1px solid #fde68a;
-      background:#fffbeb;
-      color:#92400e;
-      padding:10px 12px;
-      border-radius:12px;
-      margin:10px 0;
-    }
-    .bannerOk{
-      border:1px solid #bbf7d0;
-      background:#f0fdf4;
-      color:#166534;
-      padding:10px 12px;
-      border-radius:12px;
-      margin:10px 0;
-    }
-
-    .modal{
-      position:fixed; inset:0;
-      background:rgba(0,0,0,.55);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      padding:14px;
-      z-index:9999;
-    }
+    .bannerWarn{ border:1px solid #fde68a; background:#fffbeb; color:#92400e; padding:10px 12px; border-radius:12px; margin:10px 0; }
+    .bannerOk{ border:1px solid #bbf7d0; background:#f0fdf4; color:#166534; padding:10px 12px; border-radius:12px; margin:10px 0; }
+    .modal{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:14px; z-index:9999; }
     .modal.show{ display:flex; }
-    .modalCard{
-      width:min(980px,100%);
-      background:#fff;
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:12px;
-    }
-    #camVideo{
-      width:100%;
-      max-height:65vh;
-      background:#000;
-      border-radius:12px;
-    }
+    .modalCard{ width:min(980px,100%); background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; }
+    #camVideo{ width:100%; max-height:65vh; background:#000; border-radius:12px; }
     .modalRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
-
     .fileBtn{
-      position:relative;
-      display:inline-block;
-      border-radius:10px;
-      padding:0 12px;
+      position:relative; display:inline-block; border-radius:10px; padding:0 12px;
       background:linear-gradient(180deg, var(--wmGold2), var(--wmGold));
-      color:#1b1b1b;
-      border:1px solid rgba(0,0,0,.08);
-      cursor:pointer;
-      height:var(--ctlH);
-      min-height:var(--ctlH);
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      white-space:nowrap;
-      line-height:1;
-      font-weight:700;
+      color:#1b1b1b; border:1px solid rgba(0,0,0,.08); cursor:pointer;
+      height:var(--ctlH); min-height:var(--ctlH); display:inline-flex; align-items:center; justify-content:center;
+      white-space:nowrap; line-height:1; font-weight:700;
     }
-    .fileBtn input[type="file"]{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-      opacity:0;
-      cursor:pointer;
-    }
-
-    .pdfLoading{
-      position:fixed; inset:0;
-      background:rgba(0,0,0,.7);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      z-index:10000;
-      color:#fff;
-      font-size:18px;
-    }
+    .fileBtn input[type="file"]{ position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+    .pdfLoading{ position:fixed; inset:0; background:rgba(0,0,0,.7); display:none; align-items:center; justify-content:center; z-index:10000; color:#fff; font-size:18px; }
     .pdfLoading.show{ display:flex; }
 
-    /* Login-Gate Overlay */
     .gateOverlay{
-      position:fixed;
-      inset:0;
-      background:rgba(255,255,255,.78);
-      backdrop-filter: blur(2px);
-      display:none;
-      z-index:9000;
-      align-items:center;
-      justify-content:center;
-      padding:16px;
+      position:fixed; inset:0; background:rgba(255,255,255,.78); backdrop-filter: blur(2px);
+      display:none; z-index:9000; align-items:center; justify-content:center; padding:16px;
     }
     .gateOverlay.show{ display:flex; }
     .gateCard{
-      width:min(720px,100%);
-      background:#fff;
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:14px;
+      width:min(720px,100%); background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px;
       box-shadow:0 10px 26px rgba(17,24,39,.12);
     }
+
+    @media print{ button, video, .modal, .noPrint, .topbar, .gateOverlay{ display:none !important; } body{ background:#fff; } .card{ box-shadow:none; } }
   </style>
 </head>
 
@@ -329,7 +107,7 @@
         <img id="brandLogoImg" alt="Warnow Moments Logo" style="display:none"/>
         <div class="brandTitle">
           <h1>Übergabe & Rückgabe – Floß „Aurora“</h1>
-          <div class="sub">v14.7 · Login-Gate · keine „Bitte einloggen“-Popups</div>
+          <div class="sub">v14.8 · Supabase Fix · Rückgabe-PDF bereinigt</div>
         </div>
       </div>
 
@@ -343,12 +121,10 @@
     </div>
   </div>
 
-  <!-- Gate Overlay -->
   <div id="gateOverlay" class="gateOverlay noPrint" aria-hidden="true">
     <div class="gateCard">
       <h2 class="sectionTitle">Bitte einloggen</h2>
       <div class="tiny">Die Eingaben sind erst nach Team-Login aktiv.</div>
-      <div class="tiny" style="margin-top:8px;">Wenn ihr bereits eingeloggt seid, wartet kurz (Session lädt) oder tippt einmal auf „Liste aktualisieren“ im Login-Bereich.</div>
     </div>
   </div>
 
@@ -501,7 +277,7 @@
 
           <div class="row cols2" id="handoverSigBox">
             <div class="sigBox">
-              <label>Übergabe – Unterschrift Kunde *</label>
+              <label>Übergabe – Unterschrift Mieter *</label>
               <canvas id="sigHCustomer" class="sig"></canvas>
               <div class="btns noPrint" style="margin-top:10px;">
                 <button type="button" onclick="clearSig('sigHCustomer')">Löschen</button>
@@ -523,60 +299,54 @@
       <section id="paneR" class="card" style="margin-top:10px; display:none;">
         <h2 class="sectionTitle">Rückgabe</h2>
 
-        <div class="bannerWarn" id="returnUnlockedInfo" style="display:none;">
-          Hinweis: Rückgabe ist auch ohne hinterlegte Übergabe-Unterschrift möglich (falls Übergabe-PDF bereits versendet wurde).
+        <div class="row cols3">
+          <div>
+            <label>Datum *</label>
+            <input id="returnDate" type="date" required/>
+          </div>
+          <div>
+            <label>Uhrzeit *</label>
+            <input id="returnTime" type="time" required/>
+          </div>
+          <div>
+            <label>Rückgabe durchgeführt von (Mitarbeiter)</label>
+            <input id="returnBy" type="text" placeholder="Name"/>
+          </div>
         </div>
 
-        <div id="returnForm">
-          <div class="row cols3">
-            <div>
-              <label>Datum *</label>
-              <input id="returnDate" type="date" required/>
-            </div>
-            <div>
-              <label>Uhrzeit *</label>
-              <input id="returnTime" type="time" required/>
-            </div>
-            <div>
-              <label>Rückgabe durchgeführt von (Mitarbeiter)</label>
-              <input id="returnBy" type="text" placeholder="Name"/>
-            </div>
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label>Rückgabe-Hinweise / Besonderheiten (z.B. neue Schäden, fehlende Teile)</label>
+            <textarea id="returnNotes" placeholder="..."></textarea>
           </div>
+        </div>
 
-          <div class="row" style="margin-top:10px;">
-            <div>
-              <label>Rückgabe-Hinweise / Besonderheiten (z.B. neue Schäden, fehlende Teile)</label>
-              <textarea id="returnNotes" placeholder="..."></textarea>
-            </div>
-          </div>
+        <h3 class="sectionTitle" style="margin-top:14px;">Rückgabe-Checkliste</h3>
+        <div class="tiny">Kategorien sind einzeln aufklappbar, erste Kategorie ist offen.</div>
+        <div id="returnChecklistWrap" style="margin-top:10px;"></div>
 
-          <h3 class="sectionTitle" style="margin-top:14px;">Rückgabe-Checkliste</h3>
-          <div class="tiny">Kategorien sind einzeln aufklappbar, erste Kategorie ist offen.</div>
-          <div id="returnChecklistWrap" style="margin-top:10px;"></div>
+        <div style="margin-top:14px;" id="returnEnd">
+          <h3 class="sectionTitle">Unterschriften (nur lokal)</h3>
+          <div id="returnSigLockMsg" class="tiny">Bitte erst alle Rückgabe-Punkte erledigen.</div>
 
-          <div style="margin-top:14px;" id="returnEnd">
-            <h3 class="sectionTitle">Unterschriften (nur lokal)</h3>
-            <div id="returnSigLockMsg" class="tiny">Bitte erst alle Rückgabe-Punkte erledigen.</div>
-
-            <div class="row cols2" id="returnSigBox">
-              <div class="sigBox">
-                <label>Rückgabe – Unterschrift Gast *</label>
-                <canvas id="sigRCustomer" class="sig"></canvas>
-                <div class="btns noPrint" style="margin-top:10px;">
-                  <button type="button" onclick="clearSig('sigRCustomer')">Löschen</button>
-                </div>
-              </div>
-              <div class="sigBox">
-                <label>Rückgabe – Unterschrift Vermieter *</label>
-                <canvas id="sigRStaff" class="sig"></canvas>
-                <div class="btns noPrint" style="margin-top:10px;">
-                  <button type="button" onclick="clearSig('sigRStaff')">Löschen</button>
-                </div>
+          <div class="row cols2" id="returnSigBox">
+            <div class="sigBox">
+              <label>Rückgabe – Unterschrift Gast *</label>
+              <canvas id="sigRCustomer" class="sig"></canvas>
+              <div class="btns noPrint" style="margin-top:10px;">
+                <button type="button" onclick="clearSig('sigRCustomer')">Löschen</button>
               </div>
             </div>
-
-            <div class="bannerOk" id="closedBanner" style="display:none;">Vorgang ist geschlossen (Rückgabe unterschrieben).</div>
+            <div class="sigBox">
+              <label>Rückgabe – Unterschrift Vermieter *</label>
+              <canvas id="sigRStaff" class="sig"></canvas>
+              <div class="btns noPrint" style="margin-top:10px;">
+                <button type="button" onclick="clearSig('sigRStaff')">Löschen</button>
+              </div>
+            </div>
           </div>
+
+          <div class="bannerOk" id="closedBanner" style="display:none;">Vorgang ist geschlossen (Rückgabe unterschrieben).</div>
         </div>
       </section>
     </section>
@@ -621,7 +391,6 @@
   </div>
 
 <script>
-/* Company footer text */
 const COMPANY = { name: "Warnow Moments" };
 const PDF_FOOTER_LINES = [
   `${COMPANY.name} | Geschäftsführer: C. Völz, J. Lindloff-Rühse | Steuernummer: i. G.`,
@@ -665,43 +434,33 @@ function setAuthState(authed, userEmail){
     status.textContent = isAuthed ? ("Eingeloggt" + (userEmail ? (" als " + userEmail) : "") + ".") : "Nicht eingeloggt.";
   }
 
-  // Gate overlay
   const gate = document.getElementById("gateOverlay");
   if(gate){
     gate.classList.toggle("show", !isAuthed);
     gate.setAttribute("aria-hidden", String(!!isAuthed));
   }
 
-  // Disable/enable all inputs in appArea
   const area = document.getElementById("appArea");
   if(area){
     area.querySelectorAll("input, textarea, select, button").forEach(el=>{
-      // Buttons im Login-Card sollen natürlich aktiv bleiben, die sind nicht in appArea.
-      if(el.id === "loginEmail" || el.id === "loginPassword") return;
       el.disabled = !isAuthed || busy;
     });
   }
 
-  // Topbar buttons
   setBusy(busy);
 
-  // Saved list
   if(!isAuthed){
     const box = document.getElementById("savedList");
     if(box) box.textContent = "Bitte einloggen.";
   }else{
-    refreshSaved(); // still, ohne Popups
+    refreshSaved();
   }
 }
-
-/* No-popup session check (Fallback) */
 async function hasSession(){
   try{
     const { data } = await sb.auth.getSession();
     return !!data.session;
-  }catch(e){
-    return false;
-  }
+  }catch(e){ return false; }
 }
 
 /* Auth */
@@ -794,7 +553,7 @@ const RETURN_DEFAULT = [
 ];
 
 /* Local sensitive storage */
-const LS_LOCAL_KEY = "wmaurora_sensitive_local_v147";
+const LS_LOCAL_KEY = "wmaurora_sensitive_local_v148";
 function getLocalMap(){ try{ return JSON.parse(localStorage.getItem(LS_LOCAL_KEY)) || {}; }catch(e){ return {}; } }
 function setLocalMap(m){ try{ localStorage.setItem(LS_LOCAL_KEY, JSON.stringify(m)); }catch(e){} }
 
@@ -860,22 +619,12 @@ function syncIdPhotoUI(doSave=true){
   if(iB) iB.textContent = photos.id.back.name ? photos.id.back.name : "";
 
   if(imgF){
-    if(photos.id.front.dataUrl){
-      imgF.src = photos.id.front.dataUrl;
-      imgF.style.display = "block";
-    }else{
-      imgF.removeAttribute("src");
-      imgF.style.display = "none";
-    }
+    if(photos.id.front.dataUrl){ imgF.src = photos.id.front.dataUrl; imgF.style.display = "block"; }
+    else{ imgF.removeAttribute("src"); imgF.style.display = "none"; }
   }
   if(imgB){
-    if(photos.id.back.dataUrl){
-      imgB.src = photos.id.back.dataUrl;
-      imgB.style.display = "block";
-    }else{
-      imgB.removeAttribute("src");
-      imgB.style.display = "none";
-    }
+    if(photos.id.back.dataUrl){ imgB.src = photos.id.back.dataUrl; imgB.style.display = "block"; }
+    else{ imgB.removeAttribute("src"); imgB.style.display = "none"; }
   }
 
   if(doSave) saveSensitiveLocal();
@@ -1004,10 +753,7 @@ function renderChecklist(phase){
       body.appendChild(div);
 
       const img = div.querySelector("img");
-      if(it.photoDataUrl){
-        img.src = it.photoDataUrl;
-        img.style.display = "block";
-      }
+      if(it.photoDataUrl){ img.src = it.photoDataUrl; img.style.display = "block"; }
     });
 
     det.appendChild(body);
@@ -1174,9 +920,6 @@ function handoverSigned(){ return !sigPads.sigHCustomer.isEmpty() && !sigPads.si
 function returnSigned(){ return !sigPads.sigRCustomer.isEmpty() && !sigPads.sigRStaff.isEmpty(); }
 
 function updateWorkflow(){
-  const hint = document.getElementById("returnUnlockedInfo");
-  if(hint) hint.style.display = (!handoverSigned()) ? "block" : "none";
-
   document.getElementById("handoverSignedBanner").style.display = handoverSigned() ? "block" : "none";
   document.getElementById("closedBanner").style.display = closedAt ? "block" : "none";
   document.getElementById("closedInfo").textContent = closedAt ? ("Geschlossen am " + new Date(closedAt).toLocaleString()) : "";
@@ -1391,7 +1134,7 @@ function validatePhase(phase){
       if(!el.checkValidity()){ el.reportValidity(); missing.push("Bitte Pflichtfelder in der Übergabe ausfüllen."); }
     });
     if(!phaseReadyForSign("handover")) missing.push("Übergabe: Checkliste/Pflichtfotos noch nicht vollständig.");
-    if(sigPads.sigHCustomer.isEmpty()) missing.push("Übergabe: Unterschrift Kunde fehlt.");
+    if(sigPads.sigHCustomer.isEmpty()) missing.push("Übergabe: Unterschrift Mieter fehlt.");
     if(sigPads.sigHStaff.isEmpty()) missing.push("Übergabe: Unterschrift Vermieter fehlt.");
   }
   if(phase==="return"){
@@ -1406,37 +1149,48 @@ function validatePhase(phase){
   return { ok: missing.length===0, missing };
 }
 
-/* Central record */
+/* Central record: robust schema (recordid + status + updatedat + payload JSON) */
+function collectCentralPayload(){
+  return {
+    recordId: document.getElementById("recordId").value.trim(),
+    bookingRef: document.getElementById("bookingRef").value.trim(),
+    resourceId: document.getElementById("raftId").value.trim(),
+    handover: {
+      date: document.getElementById("handoverDate").value,
+      time: document.getElementById("handoverTime").value,
+      by: document.getElementById("handoverBy").value.trim(),
+      idChecked: document.getElementById("idChecked").value,
+      notes: document.getElementById("handoverNotes").value.trim(),
+      checklist: handoverItems
+    },
+    return: {
+      date: document.getElementById("returnDate").value,
+      time: document.getElementById("returnTime").value,
+      by: document.getElementById("returnBy").value.trim(),
+      notes: document.getElementById("returnNotes").value.trim(),
+      checklist: returnItems
+    }
+  };
+}
 function collectCentralRecord(){
-  const recordid = document.getElementById("recordId").value.trim();
-  const bookingref = document.getElementById("bookingRef").value.trim();
-  const resourceid = document.getElementById("raftId").value.trim();
-
-  const handover = {
-    date: document.getElementById("handoverDate").value,
-    time: document.getElementById("handoverTime").value,
-    by: document.getElementById("handoverBy").value.trim(),
-    idChecked: document.getElementById("idChecked").value,
-    notes: document.getElementById("handoverNotes").value.trim(),
-    checklist: handoverItems
+  const payload = collectCentralPayload();
+  return {
+    recordid: payload.recordId,
+    status: closedAt ? "closed" : "open",
+    updatedat: new Date().toISOString(),
+    payload
   };
-
-  const ret = {
-    date: document.getElementById("returnDate").value,
-    time: document.getElementById("returnTime").value,
-    by: document.getElementById("returnBy").value.trim(),
-    notes: document.getElementById("returnNotes").value.trim(),
-    checklist: returnItems
-  };
-
-  return { recordid, bookingref, resourceid, status: closedAt ? "closed" : "open", handover, return: ret, updatedat: new Date().toISOString() };
 }
 async function upsertCentralRecord(){
   if(!isAuthed) return false;
   const rec = collectCentralRecord();
   if(!rec.recordid) return false;
+
   const { error } = await sb.from(TABLE_PROTOCOLS).upsert(rec, { onConflict:"recordid" });
-  if(error){ alert("Speichern fehlgeschlagen: " + error.message); return false; }
+  if(error){
+    alert("Speichern fehlgeschlagen: " + error.message);
+    return false;
+  }
   return true;
 }
 async function loadCentralRecord(recordId){
@@ -1463,12 +1217,17 @@ async function savePhase(phase){
 
     let centralOk = true;
     try{ centralOk = await upsertCentralRecord(); }catch(e){ centralOk = false; }
+
     if(centralOk) await refreshSaved();
 
     updateWorkflow();
     updatePhaseLocks();
 
-    if(phase==="handover"){ await offerPdfDownloadOrShare("handover"); return; }
+    // Nach Übergabe direkt Mail/Share ermöglichen (wurde durch Supabase-Fehler blockiert)
+    if(phase==="handover"){
+      await openEmailDraft("handover", { force:true });
+      return;
+    }
     await openEmailDraft("return", { force:true });
   } finally {
     setBusy(false);
@@ -1476,9 +1235,11 @@ async function savePhase(phase){
 }
 async function refreshSaved(){
   if(!isAuthed) return;
+
+  // Minimal select: keine bookingref-Abhängigkeit mehr
   const { data, error } = await sb
     .from(TABLE_PROTOCOLS)
-    .select("recordid, bookingref, resourceid, status, updatedat, createdat")
+    .select("recordid, status, updatedat")
     .order("updatedat", { ascending:false })
     .limit(200);
 
@@ -1493,7 +1254,7 @@ async function refreshSaved(){
       <div style="margin:6px 0;">
         <button type="button" class="ghost" onclick="openRecord('${escapeHtml(r.recordid)}')">Öffnen</button>
         <span class="pill ${r.status==="closed" ? "ok" : ""}">${escapeHtml(st)}</span>
-        <span class="tiny">${escapeHtml(r.recordid)} · Buchung ${escapeHtml(r.bookingref)} · Floß ${escapeHtml(r.resourceid)} · ${escapeHtml(when)}</span>
+        <span class="tiny">${escapeHtml(r.recordid)} · ${escapeHtml(when)}</span>
       </div>
     `;
   }).join("");
@@ -1503,11 +1264,14 @@ async function openRecord(recordId){
   const central = await loadCentralRecord(recordId);
   if(!central){ alert("Nicht gefunden (recordId)."); return; }
 
-  document.getElementById("recordId").value = central.recordid || recordId;
-  document.getElementById("bookingRef").value = central.bookingref || "";
-  document.getElementById("raftId").value = central.resourceid || "Aurora";
+  // New schema: payload bevorzugen, sonst fallback auf alte Felder
+  const p = central.payload || {};
 
-  const h = central.handover || {};
+  document.getElementById("recordId").value = central.recordid || p.recordId || recordId;
+  document.getElementById("bookingRef").value = p.bookingRef || "";
+  document.getElementById("raftId").value = p.resourceId || "Aurora";
+
+  const h = p.handover || central.handover || {};
   document.getElementById("handoverDate").value = h.date || "";
   document.getElementById("handoverTime").value = h.time || "";
   document.getElementById("handoverBy").value = h.by || "";
@@ -1515,7 +1279,7 @@ async function openRecord(recordId){
   document.getElementById("handoverNotes").value = h.notes || "";
   handoverItems = (Array.isArray(h.checklist) && h.checklist.length>0) ? h.checklist : buildItems("handover", HANDOVER_DEFAULT);
 
-  const r = central.return || {};
+  const r = p.return || central.return || {};
   document.getElementById("returnDate").value = r.date || "";
   document.getElementById("returnTime").value = r.time || "";
   document.getElementById("returnBy").value = r.by || "";
@@ -1604,8 +1368,10 @@ function resetAll(){
   updatePhaseLocks();
 }
 
-/* PDF + Mail (gleich wie vorher – kompakt) */
-function mailSubject(){ return document.getElementById("bookingRef").value.trim(); }
+/* PDF + Mail */
+function mailSubject(){
+  return (document.getElementById("bookingRef").value.trim() || "Protokoll");
+}
 function mailBody(phase){
   const rid = document.getElementById("recordId").value.trim();
   const raft = document.getElementById("raftId").value.trim();
@@ -1696,12 +1462,11 @@ async function generatePdfBlob(phase){
 
     if(phase==="handover"){
       pdf.text("Übergabe Datum/Uhrzeit: " + (handoverDate || "-") + " " + (handoverTime || ""), 20, y); y += 6;
-      pdf.text("Übergabe durchgeführt von: " + (handoverBy || "-"), 20, y); y += 6;
+      pdf.text("Übergabe durchgeführt von: " + (handoverBy || "-"), 20, y); y += 8;
     }else{
       pdf.text("Rückgabe Datum/Uhrzeit: " + (returnDate || "-") + " " + (returnTime || ""), 20, y); y += 6;
-      pdf.text("Rückgabe durchgeführt von: " + (returnBy || "-"), 20, y); y += 6;
+      pdf.text("Rückgabe durchgeführt von: " + (returnBy || "-"), 20, y); y += 8;
     }
-    pdf.text("Rückgabe durchgeführt von: " + (returnBy || "-"), 20, y); y += 8;
 
     pdf.setFont(undefined, "bold"); pdf.setTextColor(11,42,58);
     pdf.text("Hinweise", 20, y); y += 6;
@@ -1781,18 +1546,26 @@ async function generatePdfBlob(phase){
     try{ s3 = sigPads.sigRCustomer.isEmpty() ? null : sigPads.sigRCustomer.dataUrl(); }catch(e){}
     try{ s4 = sigPads.sigRStaff.isEmpty() ? null : sigPads.sigRStaff.dataUrl(); }catch(e){}
 
-    pdf.text("Übergabe Kunde", sig1x, y);
-    pdf.text("Übergabe Vermieter", sig2x, y);
-    y += 4;
-    if(s1) await addImageContain(pdf, s1, "PNG", sig1x, y, sigW, sigH);
-    if(s2) await addImageContain(pdf, s2, "PNG", sig2x, y, sigW, sigH);
-    y += sigH + 10;
+    if(phase==="handover"){
+      pdf.text("Übergabe Mieter", sig1x, y);
+      pdf.text("Übergabe Vermieter", sig2x, y);
+      y += 4;
+      if(s1) await addImageContain(pdf, s1, "PNG", sig1x, y, sigW, sigH);
+      if(s2) await addImageContain(pdf, s2, "PNG", sig2x, y, sigW, sigH);
+      y += sigH + 10;
+    }else{
+      // Rückgabe: KEINE Übergabe-Unterschriften mehr
+    }
 
-    pdf.text("Rückgabe Gast", sig1x, y);
-    pdf.text("Rückgabe Vermieter", sig2x, y);
-    y += 4;
-    if(s3) await addImageContain(pdf, s3, "PNG", sig1x, y, sigW, sigH);
-    if(s4) await addImageContain(pdf, s4, "PNG", sig2x, y, sigW, sigH);
+    // Rückgabe-Signaturen für beide Phasen optional: bei Übergabe nicht anzeigen; bei Rückgabe anzeigen
+    if(phase==="return"){
+      pdf.text("Rückgabe Gast", sig1x, y);
+      pdf.text("Rückgabe Vermieter", sig2x, y);
+      y += 4;
+      if(s3) await addImageContain(pdf, s3, "PNG", sig1x, y, sigW, sigH);
+      if(s4) await addImageContain(pdf, s4, "PNG", sig2x, y, sigW, sigH);
+      y += sigH + 6;
+    }
 
     addPdfFooter(pdf);
     return pdf.output("blob");
@@ -1800,38 +1573,12 @@ async function generatePdfBlob(phase){
     showPdfOverlay(false);
   }
 }
-async function offerPdfDownloadOrShare(phase){
-  const blob = await generatePdfBlob(phase);
-  if(!blob) return;
-
-  const subject = mailSubject() || "protokoll";
-  const safeName = subject.replace(/[^a-zA-Z0-9-_]+/g,"_") + ".pdf";
-  const file = new File([blob], safeName, { type:"application/pdf" });
-
-  const canShareFiles = !!navigator.canShare && navigator.canShare({ files:[file] });
-  if(canShareFiles){
-    try{ await navigator.share({ files:[file], title: subject, text: "PDF-Protokoll" }); }
-    catch(e){}
-    return;
-  }
-  try{
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = safeName;
-    document.body.appendChild(a);
-    a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1500);
-  }catch(e){}
-}
 async function openEmailDraft(phase, opts={}){
   if(!isAuthed || busy) return;
   setBusy(true);
   try{
     saveSensitiveLocal();
     rehydrateNow();
-
-    const allow = handoverSigned() || returnSigned();
-    if(!allow && !opts.force) return;
 
     const to = document.getElementById("customerEmail").value.trim();
     if(!to){ document.getElementById("customerEmail").reportValidity(); return; }
@@ -1878,9 +1625,7 @@ function updateShareStatus(){
     const testFile = new File(["x"], "test.pdf", { type:"application/pdf" });
     const ok = !!navigator.canShare && navigator.canShare({ files:[testFile] });
     el.textContent = ok ? "Anhang möglich: Ja (Teilen → Mail)." : "Anhang möglich: Nein (Download manuell anhängen).";
-  }catch(e){
-    el.textContent = "";
-  }
+  }catch(e){ el.textContent = ""; }
 }
 
 /* Init */
@@ -1909,16 +1654,11 @@ async function init(){
   updatePhaseLocks();
   updateShareStatus();
 
-  // Auth state listener (entscheidend gegen „Session kurz null“)
   sb.auth.onAuthStateChange((event, session)=>{
-    if(session?.user){
-      setAuthState(true, session.user.email);
-    }else{
-      setAuthState(false);
-    }
+    if(session?.user) setAuthState(true, session.user.email);
+    else setAuthState(false);
   });
 
-  // Initial auth sync – ohne Popup
   const ok = await hasSession();
   if(ok){
     const { data } = await sb.auth.getUser();
@@ -1935,11 +1675,8 @@ async function init(){
   });
 
   const ridEl = document.getElementById("recordId");
-  ridEl.addEventListener("input", ()=>{
-    if(recordIdLocked) ridEl.value = ridEl.value;
-  });
+  ridEl.addEventListener("input", ()=>{ if(recordIdLocked) ridEl.value = ridEl.value; });
 }
-
 init();
 </script>
 </body>
