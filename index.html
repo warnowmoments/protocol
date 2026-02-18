@@ -362,6 +362,10 @@
   </div>
 
 <script>
+  // ===================== Debug =====================
+  const DEBUG_SIG = true;
+  function dlog(...a){ try{ if(DEBUG_SIG) console.log(...a); }catch{} }
+
   // ===================== Supabase =====================
   const SUPABASE_URL = "https://fnktiyujyznbbhwkeyww.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_cJyOwgz2NXfDiTj7mRUVrQ_VMAMoVdd";
@@ -438,13 +442,14 @@
   let fallbackTarget = null;
 
   const sigPads = {};
+  let recordIdLocked = false;
 
   // ===================== Helpers =====================
   const pad2 = n => String(n).padStart(2,'0');
   function nowLocalDate(){ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
   function nowLocalTime(){ const d=new Date(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
   function suggestRecordId(){ const d=new Date(); return `WM-${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}-${pad2(d.getHours())}${pad2(d.getMinutes())}`; }
-  function escapeHtml(s){ return String(s ?? '').replace(/[&<>\\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function escapeHtml(s){ return String(s ?? '').replace(/[&<>\\\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\\':'\\','"':'&quot;',"'":'&#39;'}[c] || c)); }
   function slug(s){
     return String(s ?? '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase() || 'cat';
@@ -457,21 +462,45 @@
   function getLocalMap(){ try{ return JSON.parse(localStorage.getItem(LS_LOCAL_KEY) || '{}'); }catch{ return {}; } }
   function setLocalMap(m){ try{ localStorage.setItem(LS_LOCAL_KEY, JSON.stringify(m || {})); }catch(e){} }
 
+  function anyHandoverSigPresent(){
+    try{
+      return (!sigPads.sigHCustomer?.isEmpty?.() || !sigPads.sigHStaff?.isEmpty?.());
+    }catch{
+      return false;
+    }
+  }
+
+  function lockRecordIdIfNeeded(){
+    if(recordIdLocked) return;
+    if(anyHandoverSigPresent()){
+      recordIdLocked = true;
+      const el = document.getElementById('recordId');
+      if(el){
+        el.setAttribute('readonly','readonly');
+        el.style.opacity = '0.9';
+      }
+      dlog('[recordId] locked because signatures exist');
+    }
+  }
+
   function saveSensitiveLocal(){
     const recordId = document.getElementById('recordId').value.trim();
     if(!recordId) return;
+
     const map = getLocalMap();
     map[recordId] = {
       customerName: document.getElementById('customerName').value.trim(),
       customerEmail: document.getElementById('customerEmail').value.trim(),
       idFront: photos.id.front,
       idBack: photos.id.back,
-      sigHCustomer: sigPads.sigHCustomer.isEmpty() ? null : sigPads.sigHCustomer.dataUrl(),
-      sigHStaff: sigPads.sigHStaff.isEmpty() ? null : sigPads.sigHStaff.dataUrl(),
-      sigRCustomer: sigPads.sigRCustomer.isEmpty() ? null : sigPads.sigRCustomer.dataUrl(),
-      sigRStaff: sigPads.sigRStaff.isEmpty() ? null : sigPads.sigRStaff.dataUrl()
+      sigHCustomer: sigPads.sigHCustomer?.isEmpty?.() ? null : sigPads.sigHCustomer.dataUrl(),
+      sigHStaff: sigPads.sigHStaff?.isEmpty?.() ? null : sigPads.sigHStaff.dataUrl(),
+      sigRCustomer: sigPads.sigRCustomer?.isEmpty?.() ? null : sigPads.sigRCustomer.dataUrl(),
+      sigRStaff: sigPads.sigRStaff?.isEmpty?.() ? null : sigPads.sigRStaff.dataUrl()
     };
     setLocalMap(map);
+
+    lockRecordIdIfNeeded();
   }
 
   function loadSensitiveLocal(recordId){
@@ -480,89 +509,91 @@
   }
 
   function drawDataUrlOnCanvas(canvasId, dataUrl){
-  if(!dataUrl) return;
-  const canvas = document.getElementById(canvasId);
-  if(!canvas) return;
+    if(!dataUrl) return;
+    const canvas = document.getElementById(canvasId);
+    if(!canvas) return;
 
-  const ctx = canvas.getContext('2d');
-  const img = new Image();
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const img = new Image();
 
-  img.onload = ()=>{
-    // Canvas zuerst auf korrekte Pixelgröße bringen (wie in setupSignature.resize)
-    try{ sigPads[canvasId]?.resize?.(false); }catch{}
+    img.onload = ()=>{
+      // Canvas zuerst auf korrekte Pixelgröße bringen
+      try{ sigPads[canvasId]?.resize?.(false); }catch{}
 
-    // Wichtig: in Canvas-Pixeln zeichnen, nicht in CSS-Pixeln
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      // In Canvas-Pixeln zeichnen (wichtig für isEmpty auf iPad)
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-    updatePhaseLocks();
-    updateWorkflowLocks();
-    updateStatePill();
-  };
+      saveSensitiveLocal();
+      updatePhaseLocks();
+      updateWorkflowLocks();
+      updateStatePill();
+    };
 
-  img.src = dataUrl;
-}
+    img.src = dataUrl;
+  }
 
   function syncIdPhotoUI(doSave=true){
     const iF=document.getElementById('idFrontInfo'), iB=document.getElementById('idBackInfo');
     const imgF=document.getElementById('idFrontImg'), imgB=document.getElementById('idBackImg');
 
-    iF.textContent = photos.id.front.name ? photos.id.front.name : '—';
-    iB.textContent = photos.id.back.name ? photos.id.back.name : '—';
+    if(iF) iF.textContent = photos.id.front.name ? photos.id.front.name : '—';
+    if(iB) iB.textContent = photos.id.back.name ? photos.id.back.name : '—';
 
-    if (photos.id.front.dataUrl){ imgF.src=photos.id.front.dataUrl; imgF.style.display='block'; }
-    else { imgF.removeAttribute('src'); imgF.style.display='none'; }
+    if (imgF){
+      if (photos.id.front.dataUrl){ imgF.src=photos.id.front.dataUrl; imgF.style.display='block'; }
+      else { imgF.removeAttribute('src'); imgF.style.display='none'; }
+    }
 
-    if (photos.id.back.dataUrl){ imgB.src=photos.id.back.dataUrl; imgB.style.display='block'; }
-    else { imgB.removeAttribute('src'); imgB.style.display='none'; }
+    if (imgB){
+      if (photos.id.back.dataUrl){ imgB.src=photos.id.back.dataUrl; imgB.style.display='block'; }
+      else { imgB.removeAttribute('src'); imgB.style.display='none'; }
+    }
 
     if(doSave) saveSensitiveLocal();
     updatePhaseLocks();
   }
 
   function rehydrateLocalForCurrentRecord(){
-  const recordId = document.getElementById('recordId').value.trim();
-  if(!recordId) return;
+    const recordId = document.getElementById('recordId').value.trim();
+    if(!recordId) return;
 
-  const local = loadSensitiveLocal(recordId);
-  if(!local) return;
+    const local = loadSensitiveLocal(recordId);
+    if(!local) return;
 
-  // Stammdaten (lokal) nachziehen, damit Mailto/Betreff nie leer sind
-  if(!document.getElementById('customerName').value.trim() && local.customerName){
-    document.getElementById('customerName').value = local.customerName;
+    if(!document.getElementById('customerName').value.trim() && local.customerName){
+      document.getElementById('customerName').value = local.customerName;
+    }
+    if(!document.getElementById('customerEmail').value.trim() && local.customerEmail){
+      document.getElementById('customerEmail').value = local.customerEmail;
+    }
+
+    if (!photos.id.front.dataUrl && local.idFront?.dataUrl) photos.id.front = local.idFront;
+    if (!photos.id.back.dataUrl && local.idBack?.dataUrl) photos.id.back = local.idBack;
+    syncIdPhotoUI(false);
+
+    // Signaturen nachziehen (nur wenn Canvas leer)
+    if(sigPads.sigHCustomer.isEmpty() && local.sigHCustomer) drawDataUrlOnCanvas('sigHCustomer', local.sigHCustomer);
+    if(sigPads.sigHStaff.isEmpty() && local.sigHStaff) drawDataUrlOnCanvas('sigHStaff', local.sigHStaff);
+    if(sigPads.sigRCustomer.isEmpty() && local.sigRCustomer) drawDataUrlOnCanvas('sigRCustomer', local.sigRCustomer);
+    if(sigPads.sigRStaff.isEmpty() && local.sigRStaff) drawDataUrlOnCanvas('sigRStaff', local.sigRStaff);
+
+    updateWorkflowLocks(); updateStatePill(); updatePhaseLocks();
   }
-  if(!document.getElementById('customerEmail').value.trim() && local.customerEmail){
-    document.getElementById('customerEmail').value = local.customerEmail;
-  }
-
-  // Ausweis nachziehen
-  if (!photos.id.front.dataUrl && local.idFront?.dataUrl) photos.id.front = local.idFront;
-  if (!photos.id.back.dataUrl && local.idBack?.dataUrl) photos.id.back = local.idBack;
-  syncIdPhotoUI(false);
-
-  // Signaturen nachziehen (wenn Canvas leer)
-  if(sigPads.sigHCustomer.isEmpty() && local.sigHCustomer) drawDataUrlOnCanvas('sigHCustomer', local.sigHCustomer);
-  if(sigPads.sigHStaff.isEmpty() && local.sigHStaff) drawDataUrlOnCanvas('sigHStaff', local.sigHStaff);
-  if(sigPads.sigRCustomer.isEmpty() && local.sigRCustomer) drawDataUrlOnCanvas('sigRCustomer', local.sigRCustomer);
-  if(sigPads.sigRStaff.isEmpty() && local.sigRStaff) drawDataUrlOnCanvas('sigRStaff', local.sigRStaff);
-
-  updateWorkflowLocks(); updateStatePill(); updatePhaseLocks();
-}
 
   function rehydrateNow(){
     try{ rehydrateLocalForCurrentRecord(); }catch(e){}
     try{ updateWorkflowLocks(); updateStatePill(); updatePhaseLocks(); }catch(e){}
-    try{
-    console.log('[rehydrateNow]', {
-      HcustEmpty: sigPads.sigHCustomer.isEmpty(),
-      HstaffEmpty: sigPads.sigHStaff.isEmpty(),
-      RcustEmpty: sigPads.sigRCustomer.isEmpty(),
-      RstaffEmpty: sigPads.sigRStaff.isEmpty()
-    });
-  }catch(e){
-    console.log('[rehydrateNow] debug failed', e);
-  }
 
+    try{
+      dlog('[rehydrateNow]', {
+        recordId: document.getElementById('recordId')?.value,
+        HcustEmpty: sigPads.sigHCustomer?.isEmpty?.(),
+        HstaffEmpty: sigPads.sigHStaff?.isEmpty?.(),
+        RcustEmpty: sigPads.sigRCustomer?.isEmpty?.(),
+        RstaffEmpty: sigPads.sigRStaff?.isEmpty?.()
+      });
+    }catch(e){}
   }
 
   // ===================== Checklist model =====================
@@ -676,7 +707,6 @@
       }
     });
   }
-
   function maybeAutoOpenNextCategory(phase, catIdJustChanged){
     const items = phase==='handover' ? handoverItems : returnItems;
     const {order,map} = groupByCategory(items);
@@ -742,6 +772,7 @@
       if(snap){
         const img = new Image();
         img.onload = ()=>{
+          // Snap ist CSS-Pixel groß; Transform ist gesetzt, daher CSS-Pixel hier ok
           ctx.drawImage(img, 0, 0, rect.width, rect.height);
         };
         img.src = snap;
@@ -805,6 +836,7 @@
       }
     };
   }
+
   function clearSig(id){
     sigPads[id]?.clear();
     saveSensitiveLocal();
@@ -813,17 +845,16 @@
 
   // ===================== Workflow locks / state =====================
   function handoverSigned(){
-  const customer = !sigPads.sigHCustomer.isEmpty();
-  const staff = !sigPads.sigHStaff.isEmpty();
-  console.log('[handoverSigned]', { customer, staff, closedAt, mainTab });
-  return customer && staff;
+    const customer = !sigPads.sigHCustomer.isEmpty();
+    const staff = !sigPads.sigHStaff.isEmpty();
+    dlog('[handoverSigned]', { customer, staff, closedAt, mainTab });
+    return customer && staff;
   }
-
-function returnSigned(){
-  const customer = !sigPads.sigRCustomer.isEmpty();
-  const staff = !sigPads.sigRStaff.isEmpty();
-  console.log('[returnSigned]', { customer, staff, closedAt, mainTab });
-  return customer && staff;
+  function returnSigned(){
+    const customer = !sigPads.sigRCustomer.isEmpty();
+    const staff = !sigPads.sigRStaff.isEmpty();
+    dlog('[returnSigned]', { customer, staff, closedAt, mainTab });
+    return customer && staff;
   }
 
   function updateWorkflowLocks(){
@@ -872,10 +903,12 @@ function returnSigned(){
     try{ sigPads.sigRCustomer?.resize?.(true); }catch{}
     try{ sigPads.sigRStaff?.resize?.(true); }catch{}
 
-    setTimeout(rehydrateNow, 50);
+    // iPad: erst nach Layout/Resize rehydraten
+    requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
 
     updateWorkflowLocks(); updateStatePill(); updatePhaseLocks();
   }
+
   function scrollToEnd(){
     const el = document.getElementById(mainTab === 'handover' ? 'handoverEnd' : 'returnEnd');
     if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
@@ -1116,36 +1149,36 @@ function returnSigned(){
 
   // ===================== Save / Load UI =====================
   async function savePhase(phase){
-  rehydrateNow();
-  const v = validatePhase(phase);
-  if (!v.ok){ alert("Bitte ergänzen:\n- " + v.missing.join("\n- ")); return; }
+    rehydrateNow();
+    const v = validatePhase(phase);
+    if (!v.ok){ alert("Bitte ergänzen:\n- " + v.missing.join("\n- ")); return; }
 
-  if (phase === 'return' && returnSigned()){
-    closedAt = new Date().toISOString();
+    if (phase === 'return' && returnSigned()){
+      closedAt = new Date().toISOString();
+    }
+
+    saveSensitiveLocal();
+
+    let centralOk = true;
+    try{
+      centralOk = await upsertCentralRecord();
+    }catch(e){
+      centralOk = false;
+    }
+
+    if(centralOk){
+      await refreshSaved();
+    }else{
+      alert("Hinweis: Zentral speichern ging gerade nicht. Mail/PDF wird trotzdem erstellt.");
+    }
+
+    updateWorkflowLocks(); updatePhaseLocks(); updateStatePill();
+
+    if (phase === 'return' && document.getElementById('autoEmailR').checked){ openEmailDraft('return'); }
+    if (phase === 'handover' && document.getElementById('autoEmailH').checked){ openEmailDraft('handover'); }
+
+    alert(phase==='handover' ? 'Übergabe gespeichert.' : (closedAt ? 'Rückgabe gespeichert. Vorgang geschlossen.' : 'Rückgabe gespeichert.'));
   }
-
-  saveSensitiveLocal();
-
-  let centralOk = true;
-  try{
-    centralOk = await upsertCentralRecord();
-  }catch(e){
-    centralOk = false;
-  }
-
-  if(centralOk){
-    await refreshSaved();
-  }else{
-    alert("Hinweis: Zentral speichern ging gerade nicht. Mail/PDF wird trotzdem erstellt.");
-  }
-
-  updateWorkflowLocks(); updatePhaseLocks(); updateStatePill();
-
-  if (phase === 'return' && document.getElementById('autoEmailR').checked){ openEmailDraft('return'); }
-  if (phase === 'handover' && document.getElementById('autoEmailH').checked){ openEmailDraft('handover'); }
-
-  alert(phase==='handover' ? 'Übergabe gespeichert.' : (closedAt ? 'Rückgabe gespeichert. Vorgang geschlossen.' : 'Rückgabe gespeichert.'));
-}
 
   async function refreshSaved(){
     if(!await requireLogin()) return;
@@ -1225,7 +1258,7 @@ function returnSigned(){
     renderChecklist('return');
 
     updateWorkflowLocks(); updatePhaseLocks(); updateStatePill();
-    setTimeout(rehydrateNow, 50);
+    requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
   }
 
   async function clearSaved(){
@@ -1241,6 +1274,11 @@ function returnSigned(){
 
   function resetAll(){
     closedAt = null;
+    recordIdLocked = false;
+
+    const ridEl = document.getElementById('recordId');
+    ridEl.removeAttribute('readonly');
+    ridEl.style.opacity = '';
 
     document.getElementById('recordId').value = suggestRecordId();
     document.getElementById('bookingRef').value = '';
@@ -1465,72 +1503,63 @@ function returnSigned(){
   }
 
   async function openEmailDraft(phase){
-  // Vorher alles lokal sichern
-  try{ saveSensitiveLocal(); }catch(e){}
+    try{ saveSensitiveLocal(); }catch(e){}
+    try{ rehydrateNow(); }catch(e){}
 
-  // Rehydrate, falls iOS zurückkam und Felder/Canvas leer sind
-  try{ rehydrateNow(); }catch(e){}
-
-  const to = document.getElementById('customerEmail').value.trim();
-  if (!to){
-    alert("Bitte E-Mail des Kunden eintragen.");
-    document.getElementById('customerEmail').focus();
-    return;
-  }
-
-  const subject = mailSubjectForPhase(phase);
-  const body = mailBodyForPhase(phase);
-
-  // 1) Versuch: Share-Sheet mit Anhang (einziger Weg für „Mail mit PDF-Anhang“ auf iOS)
-  // Wichtig: Kein Download-Popup davor auslösen.
-  let blob = null;
-  try{
-    blob = await generatePdfBlob(phase);
-  }catch(e){
-    blob = null;
-  }
-
-  if (!blob){
-    // Fallback: wenigstens Mailto öffnen (ohne Anhang)
-    const mailtoUrl =
-      `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailtoUrl;
-    return;
-  }
-
-  const safeName = subject.replace(/[^a-zA-Z0-9-_]+/g, '_') + '.pdf';
-  const file = new File([blob], safeName, { type: 'application/pdf' });
-
-  const canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [file] }));
-  if (canShareFiles){
-    try{
-      await navigator.share({ files: [file], title: subject, text: body });
+    const to = document.getElementById('customerEmail').value.trim();
+    if (!to){
+      alert("Bitte E-Mail des Kunden eintragen.");
+      document.getElementById('customerEmail').focus();
       return;
-    }catch(e){
-      // Abbruch/Fehler -> weiter mit mailto
     }
-  }
 
-  // 2) Fallback ohne Anhang: mailto (Adresse+Betreff sollten damit zuverlässig gefüllt sein)
-  const mailtoUrl =
-    `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nHinweis: Ein PDF-Anhang ist in diesem Modus nicht automatisch möglich. Bitte PDF manuell anhängen (Download/Dateien).")}`;
-  window.location.href = mailtoUrl;
+    const subject = mailSubjectForPhase(phase);
+    const body = mailBodyForPhase(phase);
 
-  // Optional zusätzlich: PDF-Download anbieten (ohne mailto zu blocken)
-  setTimeout(()=>{
+    let blob = null;
     try{
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = safeName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url), 1500);
-    }catch(e){}
-  }, 900);
-}
+      blob = await generatePdfBlob(phase);
+    }catch(e){
+      blob = null;
+    }
 
+    if (!blob){
+      const mailtoUrl =
+        `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailtoUrl;
+      return;
+    }
+
+    const safeName = subject.replace(/[^a-zA-Z0-9-_]+/g, '_') + '.pdf';
+    const file = new File([blob], safeName, { type: 'application/pdf' });
+
+    const canShareFiles = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+    if (canShareFiles){
+      try{
+        await navigator.share({ files: [file], title: subject, text: body });
+        return;
+      }catch(e){
+        // ignore
+      }
+    }
+
+    const mailtoUrl =
+      `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nHinweis: Ein PDF-Anhang ist in diesem Modus nicht automatisch möglich. Bitte PDF manuell anhängen (Download/Dateien).")}`;
+    window.location.href = mailtoUrl;
+
+    setTimeout(()=>{
+      try{
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = safeName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 1500);
+      }catch(e){}
+    }, 900);
+  }
 
   function updateShareStatus(){
     const el = document.getElementById('shareStatus');
@@ -1571,12 +1600,20 @@ function returnSigned(){
     updateWorkflowLocks(); updatePhaseLocks(); updateStatePill();
     updateShareStatus();
 
-    // iOS: App-Switch / bfcache robust abfangen
-    window.addEventListener('pageshow', ()=>setTimeout(rehydrateNow, 80));
+    window.addEventListener('pageshow', ()=>requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow)));
     window.addEventListener('pagehide', ()=>{ try{ saveSensitiveLocal(); }catch(e){} });
-    window.addEventListener('focus', ()=>setTimeout(rehydrateNow, 80));
+    window.addEventListener('focus', ()=>requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow)));
     document.addEventListener('visibilitychange', ()=>{
-      if(!document.hidden) setTimeout(rehydrateNow, 80);
+      if(!document.hidden) requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
+    });
+
+    // recordId guard: wenn User recordId ändert obwohl Signaturen existieren -> verhindern
+    const ridEl = document.getElementById('recordId');
+    ridEl.addEventListener('input', ()=>{
+      if(recordIdLocked){
+        // readonly sollte es verhindern; zur Sicherheit UI stabil halten
+        ridEl.value = ridEl.value;
+      }
     });
 
     const { data } = await sb.auth.getSession();
@@ -1585,7 +1622,9 @@ function returnSigned(){
       await refreshSaved();
     }
   }
+
   init();
 </script>
+
 </body>
 </html>
