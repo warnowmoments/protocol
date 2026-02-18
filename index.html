@@ -105,7 +105,7 @@
         <img id="brandLogoImg" alt="Warnow Moments Logo" style="display:none"/>
         <div class="brandTitle">
           <h1>Übergabe & Rückgabe – Floß „Aurora“</h1>
-          <div class="sub">v14.9 · Supabase Schema-sicher</div>
+          <div class="sub">v14.9 · Supabase Schema-match</div>
         </div>
       </div>
 
@@ -388,7 +388,7 @@ let camFacing = "environment";
 let camTarget = null;
 let fallbackTarget = null;
 const sigPads = {};
-let record_idLocked = false;
+let recordIdLocked = false;
 
 /* Busy + Auth gate */
 let busy = false;
@@ -533,9 +533,9 @@ function anyHandoverSigPresent(){
   catch(e){ return false; }
 }
 function lockRecordIdIfNeeded(){
-  if(record_idLocked) return;
+  if(recordIdLocked) return;
   if(anyHandoverSigPresent()){
-    record_idLocked = true;
+    recordIdLocked = true;
     const el = document.getElementById("record_id");
     if(el){
       el.setAttribute("readonly","readonly");
@@ -1120,20 +1120,60 @@ function validatePhase(phase){
   return { ok: missing.length===0, missing };
 }
 
-/* Central record: ONLY write columns that typically exist */
-function collectCentralRecordMinimal(){
-  return {
-    record_id: document.getElementById("record_id").value.trim(),
+/* Central record: MATCH Supabase columns exactly */
+function collectCentralRecord(){
+  const record_id = document.getElementById("record_id").value.trim();
+
+  const booking_ref = document.getElementById("bookingRef").value.trim();
+  const resource_id = document.getElementById("raftId").value.trim();
+
+  const handover = {
+    date: document.getElementById("handoverDate").value,
+    time: document.getElementById("handoverTime").value,
+    by: document.getElementById("handoverBy").value.trim(),
+    idChecked: document.getElementById("idChecked").value,
+    notes: document.getElementById("handoverNotes").value.trim(),
+    checklist: handoverItems
+  };
+
+  const ret = {
+    date: document.getElementById("returnDate").value,
+    time: document.getElementById("returnTime").value,
+    by: document.getElementById("returnBy").value.trim(),
+    notes: document.getElementById("returnNotes").value.trim(),
+    checklist: returnItems
+  };
+
+  // payload: kompletter Stand (ohne Ausweis/Signaturen), kann für spätere Auswertungen nützlich sein
+  const payload = {
+    record_id,
+    booking_ref,
+    resource_id,
     status: closedAt ? "closed" : "open",
-    updatedat: new Date().toISOString()
+    closedAt,
+    handover,
+    return: ret
+  };
+
+  return {
+    record_id,
+    booking_ref,
+    resource_id,
+    status: closedAt ? "closed" : "open",
+    handover,
+    "return": ret,
+    payload
   };
 }
+
 async function upsertCentralRecord(){
   if(!isAuthed) return false;
-  const rec = collectCentralRecordMinimal();
-  if(!rec.record_id) return false;
+  const rec = collectCentralRecord();
+  if(!rec.record_id){
+    alert("Vorgangsnummer (record_id) fehlt.");
+    return false;
+  }
 
-  // Wichtig: KEINE payload/bookingref Spalten mehr
   const { error } = await sb.from(TABLE_PROTOCOLS).upsert(rec, { onConflict:"record_id" });
   if(error){
     alert("Speichern fehlgeschlagen: " + error.message);
@@ -1141,10 +1181,19 @@ async function upsertCentralRecord(){
   }
   return true;
 }
+
 async function loadCentralRecord(recordId){
   if(!isAuthed) return null;
-  const { data, error } = await sb.from(TABLE_PROTOCOLS).select("record_id, status, updatedat").eq("record_id", recordId).maybeSingle();
-  if(error){ alert("Laden fehlgeschlagen: " + error.message); return null; }
+  const { data, error } = await sb
+    .from(TABLE_PROTOCOLS)
+    .select("record_id, booking_ref, resource_id, status, handover, return, payload, updated_at, created_at")
+    .eq("record_id", recordId)
+    .maybeSingle();
+
+  if(error){
+    alert("Laden fehlgeschlagen: " + error.message);
+    return null;
+  }
   return data;
 }
 
@@ -1163,10 +1212,9 @@ async function savePhase(phase){
     if(phase==="return") closedAt = new Date().toISOString();
     saveSensitiveLocal();
 
-    // Zentral speichern ist optional: wenn es scheitert, blockiert es PDF/Mail nicht
-    try{ await upsertCentralRecord(); }catch(e){}
+    const ok = await upsertCentralRecord();
+    if(ok) await refreshSaved();
 
-    await refreshSaved();
     updateWorkflow();
     updatePhaseLocks();
 
@@ -1175,12 +1223,13 @@ async function savePhase(phase){
     setBusy(false);
   }
 }
+
 async function refreshSaved(){
   if(!isAuthed) return;
   const { data, error } = await sb
     .from(TABLE_PROTOCOLS)
-    .select("record_id, status, updatedat")
-    .order("updatedat", { ascending:false })
+    .select("record_id, booking_ref, resource_id, status, updated_at, created_at")
+    .order("updated_at", { ascending:false })
     .limit(200);
 
   const box = document.getElementById("savedList");
@@ -1188,28 +1237,53 @@ async function refreshSaved(){
   if(!data || data.length===0){ box.textContent = "Noch keine zentral gespeicherten Vorgänge."; return; }
 
   box.innerHTML = data.map(r=>{
-    const when = r.updatedat ? new Date(r.updatedat).toLocaleString() : "";
+    const when = r.updated_at ? new Date(r.updated_at).toLocaleString() : "";
     const st = (r.status==="closed") ? "Abgeschlossen" : "Offen";
     return `
       <div style="margin:6px 0;">
         <button type="button" class="ghost" onclick="openRecord('${escapeHtml(r.record_id)}')">Öffnen</button>
         <span class="pill ${r.status==="closed" ? "ok" : ""}">${escapeHtml(st)}</span>
-        <span class="tiny">${escapeHtml(r.record_id)} · ${escapeHtml(when)}</span>
+        <span class="tiny">${escapeHtml(r.record_id)} · Buchung ${escapeHtml(r.booking_ref || "")} · Floß ${escapeHtml(r.resource_id || "")} · ${escapeHtml(when)}</span>
       </div>
     `;
   }).join("");
 }
+
 async function openRecord(recordId){
   if(!isAuthed) return;
 
-  // Zentral gibt es nur Minimaldaten; Details bleiben lokal (wie gewünscht/sensibel)
   const central = await loadCentralRecord(recordId);
   document.getElementById("record_id").value = recordId;
 
-  closedAt = (central?.status==="closed") ? (central.updatedat || new Date().toISOString()) : null;
+  // UI-Felder aus DB setzen (wenn vorhanden)
+  if(central){
+    if(central.booking_ref) document.getElementById("bookingRef").value = central.booking_ref;
+    if(central.resource_id) document.getElementById("raftId").value = central.resource_id;
+
+    // handover/return Daten (ohne lokale sensiblen Dinge)
+    try{
+      if(central.handover?.date) document.getElementById("handoverDate").value = central.handover.date;
+      if(central.handover?.time) document.getElementById("handoverTime").value = central.handover.time;
+      if(central.handover?.by != null) document.getElementById("handoverBy").value = central.handover.by;
+      if(central.handover?.idChecked != null) document.getElementById("idChecked").value = central.handover.idChecked;
+      if(central.handover?.notes != null) document.getElementById("handoverNotes").value = central.handover.notes;
+      if(Array.isArray(central.handover?.checklist)) handoverItems = central.handover.checklist;
+
+      if(central["return"]?.date) document.getElementById("returnDate").value = central["return"].date;
+      if(central["return"]?.time) document.getElementById("returnTime").value = central["return"].time;
+      if(central["return"]?.by != null) document.getElementById("returnBy").value = central["return"].by;
+      if(central["return"]?.notes != null) document.getElementById("returnNotes").value = central["return"].notes;
+      if(Array.isArray(central["return"]?.checklist)) returnItems = central["return"].checklist;
+    }catch(e){}
+
+    closedAt = (central.status==="closed") ? (central.updated_at || new Date().toISOString()) : null;
+  } else {
+    closedAt = null;
+  }
 
   // Lokales Wiederherstellen (Kunde/Email/Fotos/Signaturen)
   const local = loadSensitiveLocal(recordId);
+
   sigPads.sigHCustomer.clear(); sigPads.sigHStaff.clear(); sigPads.sigRCustomer.clear(); sigPads.sigRStaff.clear();
 
   if(local){
@@ -1228,10 +1302,14 @@ async function openRecord(recordId){
     syncIdPhotoUI(false);
   }
 
+  renderChecklist("handover");
+  renderChecklist("return");
+
   updateWorkflow();
   updatePhaseLocks();
   requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
 }
+
 async function clearSaved(){
   if(!isAuthed) return;
   const ok = confirm("Wirklich ALLE zentral gespeicherten Vorgänge löschen?");
@@ -1245,7 +1323,7 @@ async function clearSaved(){
 function resetAll(){
   if(!isAuthed) return;
   closedAt = null;
-  record_idLocked = false;
+  recordIdLocked = false;
   const ridEl = document.getElementById("record_id");
   ridEl.removeAttribute("readonly");
   ridEl.style.opacity = "";
@@ -1486,7 +1564,8 @@ async function generatePdfBlob(phase){
     showPdfOverlay(false);
   }
 }
-async function openEmailDraft(phase, opts={}){
+
+async function openEmailDraft(phase){
   if(!isAuthed || busy) return;
   setBusy(true);
   try{
@@ -1531,6 +1610,7 @@ async function openEmailDraft(phase, opts={}){
     setBusy(false);
   }
 }
+
 function updateShareStatus(){
   const el = document.getElementById("shareStatus");
   if(!el) return;
