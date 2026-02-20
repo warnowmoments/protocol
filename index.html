@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="utf-8"/>
@@ -9,6 +9,19 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
+    /* Login Status Styles */
+    .tiny.success { color: green; font-weight: bold; }
+    .tiny.error { color: red; }
+    .tiny.loading { color: orange; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    
+    /* Optional: Bessere Buttons */
+    button.primary { background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; }
+    button.primary:hover { background: #0056b3; }
+    button.ghost { background: transparent; color: #007bff; border: 1px solid #007bff; }
+  </style>
+</head>
+
     :root{
       --wmNavy:#0b2a3a; --wmNavy2:#081f2b; --wmGold:#c9933b; --wmGold2:#d7a657;
       --bg1:#f7f9ff; --bg2:#eef3ff; --card:#ffffff; --txt:#0b1220; --muted:#4a5a7a;
@@ -438,18 +451,41 @@ async function hasSession(){
 async function login(){
   const email = document.getElementById("loginEmail").value.trim();
   const password = document.getElementById("loginPassword").value;
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  if(error){
-    document.getElementById("authStatus").textContent = "Login fehlgeschlagen: " + error.message;
+  const statusEl = document.getElementById("authStatus");
+  
+  statusEl.innerHTML = '🔄 Anmelden...';  // Loading-Feedback
+  statusEl.className = 'tiny loading';    // CSS-Klasse für Spinner
+  
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){
+      statusEl.innerHTML = `❌ ${error.message}`;
+      statusEl.className = 'tiny error';
+      setAuthState(false);
+      return;
+    }
+    statusEl.innerHTML = `✅ Angemeldet: ${data.user?.email || email}`;
+    statusEl.className = 'tiny success';
+    setAuthState(true, data.user?.email || email);
+    await refreshSaved();  // Deine Zentral-Sync
+  } catch (error) {
+    statusEl.innerHTML = `❌ Fehler: ${error.message}`;
+    statusEl.className = 'tiny error';
     setAuthState(false);
-    return;
   }
-  setAuthState(true, data.user?.email || email);
-  await refreshSaved();
 }
 async function logout(){
-  await sb.auth.signOut();
-  setAuthState(false);
+  const statusEl = document.getElementById("authStatus");
+  statusEl.innerHTML = '🔄 Ausloggen...';
+  try {
+    await sb.auth.signOut();
+    statusEl.innerHTML = 'Nicht eingeloggt.';
+    statusEl.className = 'tiny';
+    setAuthState(false);
+  } catch (error) {
+    statusEl.innerHTML = '❌ Logout-Fehler';
+    statusEl.className = 'tiny error';
+  }
 }
 
 /* Network status */
