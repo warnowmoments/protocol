@@ -110,6 +110,21 @@
     @media print{ button, video, .modal, .noPrint, .topbar, .gateOverlay{ display:none !important; } body{ background:#fff; } .card{ box-shadow:none; } }
   </style>
 </head>
+
+<script>
+// DEBUG: Woher kommt der CSS-Dump?
+setTimeout(() => {
+    const cssDump = Array.from(document.querySelectorAll('*')).find(el => 
+        el.textContent && el.textContent.includes(':root')
+    );
+    if (cssDump) {
+        console.log('CSS-DUMP gefunden:', cssDump);
+        console.log('Parent:', cssDump.parentElement);
+        console.log('Stacktrace:', new Error().stack);
+    }
+}, 1000);
+</script>
+
 <body>
 
   <div class="topbar noPrint">
