@@ -39,7 +39,9 @@
       border:1px solid var(--line); background:#fff; color:var(--btn2); border-radius:10px; cursor:pointer;
       height:var(--ctlH); min-height:var(--ctlH); padding:0 12px; display:inline-flex; align-items:center; justify-content:center;
       line-height:1; white-space:nowrap; font-family:var(--font-base); font-size:14px;
+      transition: opacity 0.2s;
     }
+    button:active{ opacity: 0.8; }
     button.primary{ background:linear-gradient(180deg, #2563eb, #1d4ed8); border-color:#1e40af; color:#fff; }
     button.wm{ background:linear-gradient(180deg, var(--wmGold2), var(--wmGold)); border-color:rgba(0,0,0,.08); color:#1b1b1b; font-weight:700; }
     button.danger{ border-color:#fecaca; background:#fff1f2; color:#991b1b; }
@@ -69,6 +71,14 @@
     .sigLocked{ opacity:.55; }
     .sigLocked canvas{ pointer-events:none; }
     .bannerOk{ border:1px solid #bbf7d0; background:#f0fdf4; color:#166534; padding:10px 12px; border-radius:12px; margin:10px 0; }
+    
+    /* TOAST MELDUNGEN */
+    #toastBox{ position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:10000; display:flex; flex-direction:column; gap:10px; pointer-events:none; }
+    .toast{ background:#1f2937; color:#fff; padding:14px 24px; border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.2); font-size:14px; opacity:0; transform:translateY(-20px); transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-weight: 500;}
+    .toast.show{ opacity:1; transform:translateY(0); }
+    .toast.success{ background:#15803d; }
+    .toast.error{ background:#b91c1c; }
+
     .modal{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:14px; z-index:9999; }
     .modal.show{ display:flex; }
     .modalCard{ width:min(980px,100%); background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px; }
@@ -111,7 +121,7 @@
 
       <div class="btns">
         <button class="primary" id="btnSaveH" type="button" onclick="savePhase('handover')">Übergabe speichern</button>
-        <button class="primary" id="btnSaveR" type="button" onclick="savePhase('return')">Vorgang abschließen</button>
+        <button class="primary" id="btnSaveR" type="button" onclick="savePhase('return')">Rückgabe speichern & Abschließen</button>
         <button class="wm" id="btnMail" type="button" onclick="openEmailDraft(mainTab)">Mailen (+ PDF)</button>
         <button type="button" onclick="window.print()">Drucken</button>
         <button class="danger" type="button" onclick="resetAll()">Neu</button>
@@ -178,7 +188,7 @@
         </div>
         <div>
           <label>Hinweis</label>
-          <div class="tiny">iPad: „Mailen (+ PDF)" → „Teilen → Mail" (mit Anhang). Sonst Download + Mail-Entwurf.</div>
+          <div class="tiny">Beim Speichern öffnet sich automatisch das E-Mail-Programm mit dem passenden Text und PDF-Anhang!</div>
           <div class="tiny" id="shareStatus" style="margin-top:6px;"></div>
         </div>
         <div></div>
@@ -350,10 +360,29 @@ let camTarget = null;
 let fallbackTarget = null;
 const sigPads = {};
 let recordIdLocked = false;
+const standardFieldIds = ["bookingRef","raftId","handoverDate","handoverTime","handoverBy","idChecked","handoverNotes","returnDate","returnTime","returnBy","returnNotes"];
 
 /* Busy + Auth gate */
 let busy = false;
 let isAuthed = false;
+
+function showToast(msg, type="success"){
+  let box = document.getElementById("toastBox");
+  if(!box){
+    box = document.createElement("div");
+    box.id = "toastBox";
+    document.body.appendChild(box);
+  }
+  const t = document.createElement("div");
+  t.className = "toast " + type;
+  t.textContent = msg;
+  box.appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add("show")));
+  setTimeout(()=>{
+    t.classList.remove("show");
+    setTimeout(()=>t.remove(), 300);
+  }, 4000);
+}
 
 function setBusy(on){
   busy = !!on;
@@ -367,7 +396,7 @@ function setAuthState(authed, userEmail){
   isAuthed = !!authed;
   const status = document.getElementById("authStatus");
   if(status){
-    status.textContent = isAuthed ? ("Eingeloggt" + (userEmail ? (" als " + userEmail) : "") + ".") : "Nicht eingeloggt.";
+    status.textContent = isAuthed ? ("Eingeloggt als " + userEmail) : "Nicht eingeloggt.";
   }
   const gate = document.getElementById("gateOverlay");
   if(gate){
@@ -382,7 +411,6 @@ function setAuthState(authed, userEmail){
     });
 
     if(isAuthed){
-      // Canvas neu berechnen, da sie nach dem Login jetzt echte Dimensionen im sichtbaren DOM haben
       setTimeout(() => {
         try{ sigPads.sigHCustomer?.resize?.(true); }catch(e){}
         try{ sigPads.sigHStaff?.resize?.(true); }catch(e){}
@@ -401,24 +429,18 @@ function setAuthState(authed, userEmail){
   }
 }
 
-async function hasSession(){
-  try{
-    const { data } = await sb.auth.getSession();
-    return !!data.session;
-  }catch(e){ return false; }
-}
-
 /* Auth */
 async function login(){
   const email = document.getElementById("loginEmail").value.trim();
   const password = document.getElementById("loginPassword").value;
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
   if(error){
-    document.getElementById("authStatus").textContent = "Login fehlgeschlagen: " + error.message;
+    showToast("Login fehlgeschlagen: " + error.message, "error");
     setAuthState(false);
     return;
   }
   setAuthState(true, data.user?.email || email);
+  showToast("Erfolgreich eingeloggt!", "success");
   await refreshSaved();
 }
 async function logout(){
@@ -428,11 +450,9 @@ async function logout(){
 
 /* Network status */
 function setNetStatus(){
-  const el = document.getElementById("netStatus");
-  if(!el) return;
-  el.textContent = navigator.onLine ? "" : "Offline: Speichern/Laden ist nicht möglich.";
+  if(!navigator.onLine) showToast("Offline: Speichern momentan nicht möglich.", "error");
 }
-window.addEventListener("online", setNetStatus);
+window.addEventListener("online", () => showToast("Wieder online!", "success"));
 window.addEventListener("offline", setNetStatus);
 
 /* Helpers */
@@ -468,6 +488,26 @@ function fileToDataUrl(file){
 }
 function isSecureCameraPossible(){
   return !!navigator.mediaDevices?.getUserMedia && window.isSecureContext;
+}
+
+/* Bildkomprimierung für Kamera & Upload */
+function compressDataUrl(dataUrl, maxDim=1000, quality=0.7){
+  return new Promise((res)=>{
+    if(!dataUrl) return res(null);
+    const img = new Image();
+    img.onload = ()=>{
+      let w = img.width, h = img.height;
+      if(w > maxDim || h > maxDim){
+        if(w > h){ h = Math.round(h * (maxDim/w)); w = maxDim; }
+        else { w = Math.round(w * (maxDim/h)); h = maxDim; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      res(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.src = dataUrl;
+  });
 }
 
 /* Checklisten Defaults */
@@ -511,19 +551,24 @@ function lockRecordIdIfNeeded(){
   if(anyHandoverSigPresent()){
     recordIdLocked = true;
     const el = document.getElementById("record_id");
-    if(el){
-      el.setAttribute("readonly","readonly");
-      el.style.opacity = "0.9";
-    }
+    if(el){ el.setAttribute("readonly","readonly"); el.style.opacity = "0.9"; }
   }
 }
 function saveSensitiveLocal(){
   const record_id = document.getElementById("record_id").value.trim();
   if(!record_id) return;
   const map = getLocalMap();
+  
+  const draft = {};
+  standardFieldIds.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) draft[id] = el.value;
+  });
+
   map[record_id] = {
     customerName: document.getElementById("customerName").value.trim(),
     customerEmail: document.getElementById("customerEmail").value.trim(),
+    draft: draft,
     idFront: photos.id.front,
     idBack: photos.id.back,
     sigHCustomer: (sigPads.sigHCustomer?.isEmpty?.() ? null : sigPads.sigHCustomer.dataUrl()),
@@ -583,9 +628,15 @@ function rehydrateLocalForCurrentRecord(){
 
   if(!document.getElementById("customerName").value.trim() && local.customerName)
     document.getElementById("customerName").value = local.customerName;
-
   if(!document.getElementById("customerEmail").value.trim() && local.customerEmail)
     document.getElementById("customerEmail").value = local.customerEmail;
+
+  if(local.draft){
+    standardFieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if(el && !el.value && local.draft[id]) el.value = local.draft[id];
+    });
+  }
 
   if(!photos.id.front.dataUrl && local.idFront?.dataUrl) photos.id.front = local.idFront;
   if(!photos.id.back.dataUrl && local.idBack?.dataUrl) photos.id.back = local.idBack;
@@ -773,7 +824,6 @@ function setupSignature(canvasId){
     const rect = canvas.getBoundingClientRect();
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
     
-    // Vermeiden, dass auf 1x1 Pixel gerendert wird, wenn Element noch versteckt ist
     const newW = Math.max(1, Math.floor(rect.width * ratio));
     const newH = Math.max(1, Math.floor(rect.height * ratio));
     
@@ -803,7 +853,6 @@ function setupSignature(canvasId){
   let drawing = false;
   let last = null;
 
-  // Gemeinsame Koordinatenberechnung für Touch, Stift und Maus
   function getEventPos(e) {
     const rect = canvas.getBoundingClientRect();
     let clientX = e.clientX;
@@ -1018,7 +1067,7 @@ function clearTargetPhoto(target){
     updatePhaseLocks();
   }
 }
-function captureCam(){
+async function captureCam(){
   if(!isAuthed) return;
   const v = document.getElementById("camVideo");
   const c = document.getElementById("camCanvas");
@@ -1026,15 +1075,14 @@ function captureCam(){
 
   const w = v.videoWidth || 1280;
   const h = v.videoHeight || 720;
-  const maxW = 1600;
-  const scale = Math.min(1, maxW / w);
-  const sw = Math.round(w * scale);
-  const sh = Math.round(h * scale);
+  
+  c.width = w; c.height = h;
+  c.getContext("2d").drawImage(v,0,0,w,h);
+  
+  const rawDataUrl = c.toDataURL("image/jpeg", 1.0);
+  // DSGVO/Speicher-Optimierung: Foto auf max 1000px und 70% Qualität komprimieren!
+  const dataUrl = await compressDataUrl(rawDataUrl, 1000, 0.7);
 
-  c.width = sw; c.height = sh;
-  c.getContext("2d").drawImage(v,0,0,sw,sh);
-
-  const dataUrl = c.toDataURL("image/jpeg", 0.88);
   const stamp = new Date().toISOString().slice(0,19).replace("T","_").replace(/:/g,"-");
   const name = targetLabel(camTarget).replace(/\s+/g,"_")+"_"+stamp+".jpg";
 
@@ -1052,7 +1100,8 @@ document.getElementById("fallbackFile").addEventListener("change", async (e)=>{
   e.target.value = "";
   if(!file || !fallbackTarget) return;
 
-  const dataUrl = await fileToDataUrl(file);
+  const rawUrl = await fileToDataUrl(file);
+  const dataUrl = await compressDataUrl(rawUrl, 1000, 0.7); // Komprimierung auch beim Datei-Upload!
   const stamp = new Date().toISOString().slice(0,19).replace("T","_").replace(/:/g,"-");
   const name = targetLabel(fallbackTarget).replace(/\s+/g,"_")+"_"+stamp+".jpg";
   setTargetPhoto(fallbackTarget, dataUrl, name);
@@ -1074,8 +1123,8 @@ function requireBaseFields(){
   return true;
 }
 function validatePhase(phase){
-  if(closedAt) return { ok:false, missing:["Vorgang ist geschlossen."] };
-  if(!requireBaseFields()) return { ok:false, missing:["Bitte Stammdaten vervollständigen."] };
+  if(closedAt) return { ok:false, missing:["Dieser Vorgang ist bereits fest abgeschlossen!"] };
+  if(!requireBaseFields()) return { ok:false, missing:["Bitte Stammdaten oben ausfüllen (Vorgangsnummer, Name, E-Mail)."] };
 
   const missing = [];
   if(phase==="handover"){
@@ -1083,18 +1132,18 @@ function validatePhase(phase){
       const el = document.getElementById(id);
       if(!el.checkValidity()){ el.reportValidity(); missing.push("Bitte Pflichtfelder in der Übergabe ausfüllen."); }
     });
-    if(!phaseReadyForSign("handover")) missing.push("Übergabe: Checkliste/Pflichtfotos noch nicht vollständig.");
-    if(sigPads.sigHCustomer.isEmpty()) missing.push("Übergabe: Unterschrift Mieter fehlt.");
-    if(sigPads.sigHStaff.isEmpty()) missing.push("Übergabe: Unterschrift Vermieter fehlt.");
+    if(!phaseReadyForSign("handover")) missing.push("Checkliste / Pflichtfotos der Übergabe nicht vollständig.");
+    if(sigPads.sigHCustomer.isEmpty()) missing.push("Unterschrift Mieter fehlt.");
+    if(sigPads.sigHStaff.isEmpty()) missing.push("Unterschrift Vermieter fehlt.");
   }
   if(phase==="return"){
     ["returnDate","returnTime"].forEach(id=>{
       const el = document.getElementById(id);
       if(!el.checkValidity()){ el.reportValidity(); missing.push("Bitte Pflichtfelder in der Rückgabe ausfüllen."); }
     });
-    if(!phaseReadyForSign("return")) missing.push("Rückgabe: Checkliste/Pflichtfotos noch nicht vollständig.");
-    if(sigPads.sigRCustomer.isEmpty()) missing.push("Rückgabe: Unterschrift Gast fehlt.");
-    if(sigPads.sigRStaff.isEmpty()) missing.push("Rückgabe: Unterschrift Vermieter fehlt.");
+    if(!phaseReadyForSign("return")) missing.push("Checkliste / Pflichtfotos der Rückgabe nicht vollständig.");
+    if(sigPads.sigRCustomer.isEmpty()) missing.push("Unterschrift Gast fehlt.");
+    if(sigPads.sigRStaff.isEmpty()) missing.push("Unterschrift Vermieter fehlt.");
   }
   return { ok: missing.length===0, missing };
 }
@@ -1148,13 +1197,13 @@ async function upsertCentralRecord(){
   if(!isAuthed) return false;
   const rec = collectCentralRecord();
   if(!rec.record_id){
-    alert("Vorgangsnummer (record_id) fehlt.");
+    showToast("Vorgangsnummer fehlt.", "error");
     return false;
   }
 
   const { error } = await sb.from(TABLE_PROTOCOLS).upsert(rec, { onConflict:"record_id" });
   if(error){
-    alert("Speichern fehlgeschlagen: " + error.message);
+    showToast("Speichern auf Server fehlgeschlagen: " + error.message, "error");
     return false;
   }
   return true;
@@ -1169,7 +1218,7 @@ async function loadCentralRecord(recordId){
     .maybeSingle();
 
   if(error){
-    alert("Laden fehlgeschlagen: " + error.message);
+    showToast("Laden vom Server fehlgeschlagen: " + error.message, "error");
     return null;
   }
   return data;
@@ -1183,7 +1232,7 @@ async function savePhase(phase){
     rehydrateNow();
     const v = validatePhase(phase);
     if(!v.ok){
-      alert("Bitte ergänzen:\n- " + v.missing.join("\n- "));
+      showToast(v.missing.join(" "), "error");
       return;
     }
 
@@ -1196,7 +1245,19 @@ async function savePhase(phase){
     updateWorkflow();
     updatePhaseLocks();
 
-    await openEmailDraft(phase, { force:true });
+    showToast("Vorgang in Datenbank gesichert. Mail wird vorbereitet...", "success");
+
+    // E-Mail-App wird automatisch geöffnet
+    await openEmailDraft(phase);
+
+    // DSGVO-CLEANUP: Wenn die Rückgabe unterschrieben und per Mail versendet wurde, Ausweisbilder vom Gerät löschen!
+    if(phase === "return") {
+      photos.id.front = {dataUrl:null,name:null};
+      photos.id.back = {dataUrl:null,name:null};
+      syncIdPhotoUI(true);
+      showToast("Vorgang komplett abgeschlossen! (Ausweisfotos wurden gem. DSGVO automatisch vom Gerät gelöscht.)", "success");
+    }
+
   } finally {
     setBusy(false);
   }
@@ -1265,6 +1326,14 @@ async function openRecord(recordId){
   if(local){
     document.getElementById("customerName").value = local.customerName || "";
     document.getElementById("customerEmail").value = local.customerEmail || "";
+
+    if(local.draft){
+      standardFieldIds.forEach(id => {
+        const el = document.getElementById(id);
+        if(el && !el.value && local.draft[id]) el.value = local.draft[id];
+      });
+    }
+
     photos.id.front = local.idFront || {dataUrl:null,name:null};
     photos.id.back  = local.idBack  || {dataUrl:null,name:null};
     syncIdPhotoUI(false);
@@ -1284,6 +1353,7 @@ async function openRecord(recordId){
   updateWorkflow();
   updatePhaseLocks();
   requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow));
+  showToast("Vorgang geladen.", "success");
 }
 
 async function clearSaved(){
@@ -1291,8 +1361,9 @@ async function clearSaved(){
   const ok = confirm("Wirklich ALLE zentral gespeicherten Vorgänge löschen?");
   if(!ok) return;
   const { error } = await sb.from(TABLE_PROTOCOLS).delete().neq("record_id","");
-  if(error){ alert("Löschen fehlgeschlagen: " + error.message); return; }
+  if(error){ showToast("Löschen fehlgeschlagen: " + error.message, "error"); return; }
   document.getElementById("savedList").textContent = "Gelöscht.";
+  showToast("Alle Datenbank-Einträge gelöscht!", "success");
 }
 
 /* Reset */
@@ -1339,6 +1410,7 @@ function resetAll(){
   setMainTab("handover");
   updateWorkflow();
   updatePhaseLocks();
+  showToast("Leerer Vorgang erstellt.", "success");
 }
 
 /* PDF + Mail */
@@ -1399,7 +1471,7 @@ function addPdfFooter(pdf){
   }catch(e){}
 }
 async function generatePdfBlob(phase){
-  if(!window.jspdf?.jsPDF){ alert("PDF-Bibliothek (jsPDF) konnte nicht geladen werden."); return null; }
+  if(!window.jspdf?.jsPDF){ showToast("PDF-Bibliothek (jsPDF) konnte nicht geladen werden.", "error"); return null; }
   showPdfOverlay(true);
   try{
     const jsPDF = window.jspdf.jsPDF;
@@ -1453,10 +1525,10 @@ async function generatePdfBlob(phase){
     pdf.text(noteLines, 20, y);
     y += Math.min(60, noteLines.length * 5 + 6);
 
-    if(phase==="handover"){
+    if(phase==="handover" && (photos.id.front.dataUrl || photos.id.back.dataUrl)){
       if(y > 230){ pdf.addPage(); y = 16; }
       pdf.setFont(undefined, "bold"); pdf.setTextColor(11,42,58);
-      pdf.text("Ausweis-Fotos (lokal)", 20, y); y += 6;
+      pdf.text("Ausweis-Fotos (lokal gesichert)", 20, y); y += 6;
 
       pdf.setFont(undefined, "normal"); pdf.setTextColor(11,18,32);
       const fmtF = guessImageFormat(photos.id.front.dataUrl) || "JPEG";
@@ -1467,8 +1539,8 @@ async function generatePdfBlob(phase){
       pdf.text("Rückseite", x2, y);
       y += 4;
 
-      await addImageContain(pdf, photos.id.front.dataUrl, fmtF, x1, y, boxW, boxH);
-      await addImageContain(pdf, photos.id.back.dataUrl, fmtB, x2, y, boxW, boxH);
+      if(photos.id.front.dataUrl) await addImageContain(pdf, photos.id.front.dataUrl, fmtF, x1, y, boxW, boxH);
+      if(photos.id.back.dataUrl) await addImageContain(pdf, photos.id.back.dataUrl, fmtB, x2, y, boxW, boxH);
       y += boxH + 8;
     }
 
@@ -1511,7 +1583,7 @@ async function generatePdfBlob(phase){
 
     if(y > 240){ pdf.addPage(); y = 16; }
     pdf.setFont(undefined, "bold"); pdf.setTextColor(11,42,58);
-    pdf.text("Unterschriften (lokal)", 20, y); y += 6;
+    pdf.text("Unterschriften", 20, y); y += 6;
 
     pdf.setFont(undefined, "normal"); pdf.setTextColor(11,18,32);
     const sigW = 80, sigH = 35, sig1x = 20, sig2x = 110;
@@ -1547,8 +1619,8 @@ async function generatePdfBlob(phase){
 }
 
 async function openEmailDraft(phase){
-  if(!isAuthed || busy) return;
-  setBusy(true);
+  if(!isAuthed) return;
+  
   try{
     saveSensitiveLocal();
     rehydrateNow();
@@ -1572,13 +1644,13 @@ async function openEmailDraft(phase){
     const canShareFiles = !!navigator.canShare && navigator.canShare({ files:[file] });
 
     if(canShareFiles){
-      // FÜR IPAD/MOBILE: Da iOS das An-Feld beim Teilen blockiert, fügen wir es direkt oben in den Text als Hilfe ein.
-      const shareBody = `[Empfänger-E-Mail: ${to} -> Bitte hier kopieren und ins "An"-Feld einfügen]\n\n${body}`;
+      // FÜR IPAD/MOBILE
+      const shareBody = `[Empfänger: ${to} -> Bitte oben ins "An"-Feld einfügen]\n\n${body}`;
       try{ await navigator.share({ files:[file], title: subject, text: shareBody }); }catch(e){}
       return;
     }
 
-    // FÜR MAC/PC: Automatisches Ausfüllen von "An" und "Betreff" via mailto:
+    // FÜR MAC/PC
     window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nHinweis: PDF bitte manuell anhängen.")}`;
     setTimeout(()=>{
       try{
@@ -1590,8 +1662,8 @@ async function openEmailDraft(phase){
         setTimeout(()=>URL.revokeObjectURL(url),1500);
       }catch(e){}
     }, 800);
-  } finally {
-    setBusy(false);
+  } catch(e) {
+    showToast("Fehler bei der E-Mail Erstellung.", "error");
   }
 }
 
@@ -1628,6 +1700,15 @@ async function init(){
 
   try { syncIdPhotoUI(false); updateWorkflow(); updatePhaseLocks(); updateShareStatus(); } catch(e) {}
 
+  // Auto-Save Listeners an alle Inputs hängen
+  document.querySelectorAll("#appArea input, #appArea textarea, #appArea select").forEach(el=>{
+    el.addEventListener("change", saveSensitiveLocal);
+    el.addEventListener("input", ()=>{
+      clearTimeout(el._saveT);
+      el._saveT = setTimeout(saveSensitiveLocal, 800);
+    });
+  });
+
   sb.auth.onAuthStateChange((event, session) => {
     if(session?.user) setAuthState(true, session.user.email);
     else setAuthState(false);
@@ -1639,7 +1720,7 @@ async function init(){
       const { data: { user } } = await sb.auth.getUser();
       setAuthState(true, user.email);
     }
-  } catch(e) { console.log('Auth failed:', e); }
+  } catch(e) {}
 
   window.addEventListener("pageshow", ()=>requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow)));
   window.addEventListener("pagehide", ()=>{ try{ saveSensitiveLocal(); }catch(e){} });
