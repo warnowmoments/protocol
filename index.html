@@ -253,7 +253,8 @@ const PDF_FOOTER_LINES = [
 /* Supabase */
 const SUPABASE_URL = "https://fnktiyujyznbbhwkeyww.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_cJyOwgz2NXfDiTj7mRUVrQ_VMAMoVdd";
-const sb = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const { createClient } = supabase;  // ← NEU!
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);  // ← FIX!
 const TABLE_PROTOCOLS = "protocols";
 
 /* Global state */
