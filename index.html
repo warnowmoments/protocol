@@ -376,12 +376,20 @@ function setAuthState(authed, userEmail){
   }
   const area = document.getElementById("appArea");
   if(area){
-    // WICHTIG: appArea wieder sichtbar machen!
     area.style.display = isAuthed ? "block" : "none"; 
-    
     area.querySelectorAll("input, textarea, select, button").forEach(el=>{
       el.disabled = !isAuthed || busy;
     });
+
+    if(isAuthed){
+      // Canvas neu berechnen, da sie nach dem Login jetzt echte Dimensionen im sichtbaren DOM haben
+      setTimeout(() => {
+        try{ sigPads.sigHCustomer?.resize?.(true); }catch(e){}
+        try{ sigPads.sigHStaff?.resize?.(true); }catch(e){}
+        try{ sigPads.sigRCustomer?.resize?.(true); }catch(e){}
+        try{ sigPads.sigRStaff?.resize?.(true); }catch(e){}
+      }, 50);
+    }
   }
   setBusy(busy);
 
@@ -764,8 +772,11 @@ function setupSignature(canvasId){
     }
     const rect = canvas.getBoundingClientRect();
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    
+    // Vermeiden, dass auf 1x1 Pixel gerendert wird, wenn Element noch versteckt ist
     const newW = Math.max(1, Math.floor(rect.width * ratio));
     const newH = Math.max(1, Math.floor(rect.height * ratio));
+    
     if(canvas.width === newW && canvas.height === newH){
       ctx.setTransform(ratio,0,0,ratio,0,0);
       applyPen();
@@ -792,13 +803,26 @@ function setupSignature(canvasId){
   let drawing = false;
   let last = null;
 
+  // Gemeinsame Koordinatenberechnung für Touch, Stift und Maus
+  function getEventPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    let clientX = e.clientX;
+    let clientY = e.clientY;
+    
+    // Fallback auf Touch-Koordinaten, wenn es ein Touch-Event ist
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    }
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }
+
   function startAt(p){ if(!isAuthed) return; drawing = true; last = p; }
   function lineTo(p){
-    if(!isAuthed) return;
-    if(!drawing) return;
+    if(!isAuthed || !drawing || !last) return;
     ctx.beginPath();
-    ctx.moveTo(last.x,last.y);
-    ctx.lineTo(p.x,p.y);
+    ctx.moveTo(last.x, last.y);
+    ctx.lineTo(p.x, p.y);
     ctx.stroke();
     last = p;
   }
@@ -810,23 +834,14 @@ function setupSignature(canvasId){
     updatePhaseLocks();
   }
 
-  canvas.addEventListener("pointerdown", e=>{ startAt({x:e.offsetX,y:e.offsetY}); e.preventDefault(); });
-  canvas.addEventListener("pointermove", e=>{ lineTo({x:e.offsetX,y:e.offsetY}); e.preventDefault(); });
+  // Event Listener (Pointer für Maus/Stylus + Touch für iPad/Handy)
+  canvas.addEventListener("pointerdown", e=>{ startAt(getEventPos(e)); e.preventDefault(); });
+  canvas.addEventListener("pointermove", e=>{ lineTo(getEventPos(e)); e.preventDefault(); });
   canvas.addEventListener("pointerup", e=>{ end(); e.preventDefault(); });
   canvas.addEventListener("pointercancel", e=>{ end(); e.preventDefault(); });
 
-  canvas.addEventListener("touchstart", e=>{
-    if(!e.touches?.[0]) return;
-    const r = canvas.getBoundingClientRect();
-    startAt({x:e.touches[0].clientX-r.left, y:e.touches[0].clientY-r.top});
-    e.preventDefault();
-  }, { passive:false });
-  canvas.addEventListener("touchmove", e=>{
-    if(!e.touches?.[0]) return;
-    const r = canvas.getBoundingClientRect();
-    lineTo({x:e.touches[0].clientX-r.left, y:e.touches[0].clientY-r.top});
-    e.preventDefault();
-  }, { passive:false });
+  canvas.addEventListener("touchstart", e=>{ startAt(getEventPos(e)); e.preventDefault(); }, { passive:false });
+  canvas.addEventListener("touchmove", e=>{ lineTo(getEventPos(e)); e.preventDefault(); }, { passive:false });
   canvas.addEventListener("touchend", e=>{ end(); e.preventDefault(); }, { passive:false });
   canvas.addEventListener("touchcancel", e=>{ end(); e.preventDefault(); }, { passive:false });
 
@@ -1584,7 +1599,7 @@ function updateShareStatus(){
   }catch(e){ el.textContent = ""; }
 }
 
-/* Init - FIXED SYNTAX */
+/* Init */
 async function init(){
   setNetStatus();
   try {
@@ -1599,7 +1614,6 @@ async function init(){
   renderChecklist("handover");
   renderChecklist("return");
 
-  // Dates/Times
   const recordEl = document.getElementById("record_id"); if(recordEl) recordEl.value = suggestRecordId();
   const hDateEl = document.getElementById("handoverDate"); if(hDateEl) hDateEl.value = nowLocalDate();
   const hTimeEl = document.getElementById("handoverTime"); if(hTimeEl) hTimeEl.value = nowLocalTime();
