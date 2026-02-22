@@ -205,7 +205,7 @@
         <div class="row cols3">
           <div><label>Datum</label><input id="handoverDate" type="date" required/></div>
           <div><label>Uhrzeit</label><input id="handoverTime" type="time" required/></div>
-          <div><label>Durchgeführt von (Vermieter)</label><input id="handoverBy" type="text"/></div>
+          <div><label>Durchgeführt von (Vermieter) *</label><input id="handoverBy" type="text" required/></div>
         </div>
         <div class="row cols2" style="margin-top:10px;">
           <div>
@@ -264,7 +264,7 @@
         <div class="row cols3">
           <div><label>Datum</label><input id="returnDate" type="date" required/></div>
           <div><label>Uhrzeit</label><input id="returnTime" type="time" required/></div>
-          <div><label>Durchgeführt von (Vermieter)</label><input id="returnBy" type="text"/></div>
+          <div><label>Durchgeführt von (Vermieter) *</label><input id="returnBy" type="text" required/></div>
         </div>
         <div class="row cols1" style="margin-top:10px;">
           <div>
@@ -1080,7 +1080,6 @@ async function captureCam(){
   c.getContext("2d").drawImage(v,0,0,w,h);
   
   const rawDataUrl = c.toDataURL("image/jpeg", 1.0);
-  // DSGVO/Speicher-Optimierung: Foto auf max 1000px und 70% Qualität komprimieren!
   const dataUrl = await compressDataUrl(rawDataUrl, 1000, 0.7);
 
   const stamp = new Date().toISOString().slice(0,19).replace("T","_").replace(/:/g,"-");
@@ -1101,7 +1100,7 @@ document.getElementById("fallbackFile").addEventListener("change", async (e)=>{
   if(!file || !fallbackTarget) return;
 
   const rawUrl = await fileToDataUrl(file);
-  const dataUrl = await compressDataUrl(rawUrl, 1000, 0.7); // Komprimierung auch beim Datei-Upload!
+  const dataUrl = await compressDataUrl(rawUrl, 1000, 0.7);
   const stamp = new Date().toISOString().slice(0,19).replace("T","_").replace(/:/g,"-");
   const name = targetLabel(fallbackTarget).replace(/\s+/g,"_")+"_"+stamp+".jpg";
   setTargetPhoto(fallbackTarget, dataUrl, name);
@@ -1128,7 +1127,7 @@ function validatePhase(phase){
 
   const missing = [];
   if(phase==="handover"){
-    ["handoverDate","handoverTime","idChecked","handoverNotes"].forEach(id=>{
+    ["handoverDate","handoverTime","handoverBy","idChecked","handoverNotes"].forEach(id=>{
       const el = document.getElementById(id);
       if(!el.checkValidity()){ el.reportValidity(); missing.push("Bitte Pflichtfelder in der Übergabe ausfüllen."); }
     });
@@ -1137,7 +1136,7 @@ function validatePhase(phase){
     if(sigPads.sigHStaff.isEmpty()) missing.push("Unterschrift Vermieter fehlt.");
   }
   if(phase==="return"){
-    ["returnDate","returnTime"].forEach(id=>{
+    ["returnDate","returnTime","returnBy"].forEach(id=>{
       const el = document.getElementById(id);
       if(!el.checkValidity()){ el.reportValidity(); missing.push("Bitte Pflichtfelder in der Rückgabe ausfüllen."); }
     });
@@ -1239,18 +1238,20 @@ async function savePhase(phase){
     if(phase==="return") closedAt = new Date().toISOString();
     saveSensitiveLocal();
 
-    const ok = await upsertCentralRecord();
-    if(ok) await refreshSaved();
-
     updateWorkflow();
     updatePhaseLocks();
 
-    showToast("Vorgang in Datenbank gesichert. Mail wird vorbereitet...", "success");
+    showToast("Mail wird geöffnet & Daten im Hintergrund gesichert...", "success");
 
-    // E-Mail-App wird automatisch geöffnet
+    // Supabase Update im HINTERGRUND starten, damit Safari den Button-Klick nicht vergisst!
+    upsertCentralRecord().then(ok => {
+      if(ok) refreshSaved();
+    });
+
+    // SOFORT die Mail öffnen
     await openEmailDraft(phase);
 
-    // DSGVO-CLEANUP: Wenn die Rückgabe unterschrieben und per Mail versendet wurde, Ausweisbilder vom Gerät löschen!
+    // DSGVO-CLEANUP
     if(phase === "return") {
       photos.id.front = {dataUrl:null,name:null};
       photos.id.back = {dataUrl:null,name:null};
@@ -1644,8 +1645,8 @@ async function openEmailDraft(phase){
     const canShareFiles = !!navigator.canShare && navigator.canShare({ files:[file] });
 
     if(canShareFiles){
-      // FÜR IPAD/MOBILE
-      const shareBody = `[Empfänger: ${to} -> Bitte oben ins "An"-Feld einfügen]\n\n${body}`;
+      // FÜR IPAD/MOBILE: Reine E-Mail-Adresse oben! Ohne störenden Text.
+      const shareBody = `${to}\n\n${body}`;
       try{ await navigator.share({ files:[file], title: subject, text: shareBody }); }catch(e){}
       return;
     }
