@@ -809,7 +809,6 @@ function setupSignature(canvasId){
     let clientX = e.clientX;
     let clientY = e.clientY;
     
-    // Fallback auf Touch-Koordinaten, wenn es ein Touch-Event ist
     if (e.touches && e.touches.length > 0) {
       clientX = e.touches[0].clientX;
       clientY = e.touches[0].clientY;
@@ -834,7 +833,6 @@ function setupSignature(canvasId){
     updatePhaseLocks();
   }
 
-  // Event Listener (Pointer für Maus/Stylus + Touch für iPad/Handy)
   canvas.addEventListener("pointerdown", e=>{ startAt(getEventPos(e)); e.preventDefault(); });
   canvas.addEventListener("pointermove", e=>{ lineTo(getEventPos(e)); e.preventDefault(); });
   canvas.addEventListener("pointerup", e=>{ end(); e.preventDefault(); });
@@ -1344,7 +1342,11 @@ function resetAll(){
 }
 
 /* PDF + Mail */
-function mailSubject(){ return (document.getElementById("bookingRef").value.trim() || "Protokoll"); }
+function mailSubject(){
+  const ref = document.getElementById("bookingRef").value.trim();
+  return ref ? `Protokoll Warnow Moments - ${ref}` : "Protokoll Warnow Moments";
+}
+
 function mailBody(phase){
   const rid = document.getElementById("record_id").value.trim();
   const raft = document.getElementById("raftId").value.trim();
@@ -1360,6 +1362,7 @@ function mailBody(phase){
     "Im Anhang finden Sie das vollständige Protokoll als PDF."
   ].join("\n");
 }
+
 function showPdfOverlay(on){ document.getElementById("pdfLoadingOverlay").classList.toggle("show", !!on); }
 function guessImageFormat(dataUrl){ if(!dataUrl) return null; if(String(dataUrl).startsWith("data:image/png")) return "PNG"; return "JPEG"; }
 function getImageSize(dataUrl){
@@ -1569,10 +1572,13 @@ async function openEmailDraft(phase){
     const canShareFiles = !!navigator.canShare && navigator.canShare({ files:[file] });
 
     if(canShareFiles){
-      try{ await navigator.share({ files:[file], title: subject, text: body }); }catch(e){}
+      // FÜR IPAD/MOBILE: Da iOS das An-Feld beim Teilen blockiert, fügen wir es direkt oben in den Text als Hilfe ein.
+      const shareBody = `[Empfänger-E-Mail: ${to} -> Bitte hier kopieren und ins "An"-Feld einfügen]\n\n${body}`;
+      try{ await navigator.share({ files:[file], title: subject, text: shareBody }); }catch(e){}
       return;
     }
 
+    // FÜR MAC/PC: Automatisches Ausfüllen von "An" und "Betreff" via mailto:
     window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body + "\n\nHinweis: PDF bitte manuell anhängen.")}`;
     setTimeout(()=>{
       try{
