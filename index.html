@@ -119,23 +119,21 @@
     </div>
   </div>
 
-  <!-- ✅ GEÄNDERT: class="gateOverlay show noPrint" (war nur "gateOverlay noPrint") -->
   <div id="gateOverlay" class="gateOverlay show noPrint" aria-hidden="true">
-  <div class="gateCard">
-    <h2 class="sectionTitle">Team-Login erforderlich</h2>
-    <div class="row cols3" style="margin-top:12px;">
-      <div><label>E-Mail</label><input id="loginEmail" type="email" autocomplete="username"/></div>
-      <div><label>Passwort</label><input id="loginPassword" type="password" autocomplete="current-password"/></div>
-      <div style="display:flex;align-items:end;gap:10px;flex-wrap:wrap;">
-        <button class="primary" type="button" onclick="login()">Anmelden</button>
+    <div class="gateCard">
+      <h2 class="sectionTitle">Team-Login erforderlich</h2>
+      <div class="row cols3" style="margin-top:12px;">
+        <div><label>E-Mail</label><input id="loginEmail" type="email" autocomplete="username"/></div>
+        <div><label>Passwort</label><input id="loginPassword" type="password" autocomplete="current-password"/></div>
+        <div style="display:flex;align-items:end;gap:10px;flex-wrap:wrap;">
+          <button class="primary" type="button" onclick="login()">Anmelden</button>
+        </div>
       </div>
+      <div class="tiny" id="authStatus">Eingabe möglich als team@warnow-moments.de</div>
     </div>
-    <div class="tiny" id="authStatus">Eingabe möglich als team@warnow-moments.de</div>
   </div>
-</div>
 
   <div class="wrap">
-    <!-- ✅ GEÄNDERT: appArea jetzt "display:none" beim Start -->
     <section class="card" style="margin-top:12px; display:none;" id="appArea">
       <h2 class="sectionTitle">Stammdaten (lokal fürs PDF/Mail) + Schlüssel (zentral)</h2>
 
@@ -192,13 +190,100 @@
         <button class="ghost" type="button" onclick="scrollToEnd()">Zum Abschluss (Unterschrift)</button>
       </div>
 
-      <!-- REST DES INHALTS UNVERÄNDERT -->
       <section id="paneH" class="card" style="margin-top:10px;">
-        <!-- ... dein bestehender Übergabe-Inhalt ... -->
+        <h2 class="sectionTitle">Übergabe</h2>
+        <div class="row cols3">
+          <div><label>Datum</label><input id="handoverDate" type="date" required/></div>
+          <div><label>Uhrzeit</label><input id="handoverTime" type="time" required/></div>
+          <div><label>Durchgeführt von (Vermieter)</label><input id="handoverBy" type="text"/></div>
+        </div>
+        <div class="row cols2" style="margin-top:10px;">
+          <div>
+            <label>Ausweisprüfung</label>
+            <select id="idChecked" required>
+              <option value="">-- Bitte wählen --</option>
+              <option value="Personalausweis">Personalausweis</option>
+              <option value="Reisepass">Reisepass</option>
+              <option value="Führerschein">Führerschein</option>
+              <option value="Sonstiges">Sonstiges</option>
+            </select>
+            <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="button" class="ghost" onclick="startCapture({type:'id', side:'front'})">Foto Ausweis Vorne</button>
+              <button type="button" class="ghost" onclick="clearTargetPhoto({type:'id', side:'front'})">Löschen</button>
+              <div class="tiny" id="idFrontInfo" style="width:100%"></div>
+              <img id="idFrontImg" class="photoThumb" alt="Vorderseite">
+            </div>
+            <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="button" class="ghost" onclick="startCapture({type:'id', side:'back'})">Foto Ausweis Hinten</button>
+              <button type="button" class="ghost" onclick="clearTargetPhoto({type:'id', side:'back'})">Löschen</button>
+              <div class="tiny" id="idBackInfo" style="width:100%"></div>
+              <img id="idBackImg" class="photoThumb" alt="Rückseite">
+            </div>
+          </div>
+          <div>
+            <label>Besondere Hinweise zur Übergabe</label>
+            <textarea id="handoverNotes" placeholder="Notizen..."></textarea>
+          </div>
+        </div>
+        
+        <div style="margin-top:20px;" id="handoverChecklistWrap"></div>
+
+        <div id="handoverEnd" style="margin-top:20px;">
+          <div class="bannerOk" id="handoverSignedBanner" style="display:none;">Die Übergabe ist unterschrieben. Sie können nun speichern.</div>
+          <div class="sigBox" id="handoverSigBox">
+            <h3 class="sectionTitle" style="margin-top:0;">Bestätigung der Übergabe</h3>
+            <div class="tiny" style="color:#991b1b; margin-bottom:10px;" id="handoverSigLockMsg"></div>
+            <div class="row cols2">
+              <div>
+                <label>Unterschrift Mieter</label>
+                <canvas id="sigHCustomer" class="sig"></canvas>
+                <button type="button" class="ghost" style="margin-top:6px;" onclick="clearSig('sigHCustomer')">Löschen</button>
+              </div>
+              <div>
+                <label>Unterschrift Vermieter</label>
+                <canvas id="sigHStaff" class="sig"></canvas>
+                <button type="button" class="ghost" style="margin-top:6px;" onclick="clearSig('sigHStaff')">Löschen</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section id="paneR" class="card" style="margin-top:10px; display:none;">
-        <!-- ... dein bestehender Rückgabe-Inhalt ... -->
+        <h2 class="sectionTitle">Rückgabe</h2>
+        <div class="row cols3">
+          <div><label>Datum</label><input id="returnDate" type="date" required/></div>
+          <div><label>Uhrzeit</label><input id="returnTime" type="time" required/></div>
+          <div><label>Durchgeführt von (Vermieter)</label><input id="returnBy" type="text"/></div>
+        </div>
+        <div class="row cols1" style="margin-top:10px;">
+          <div>
+            <label>Besondere Hinweise zur Rückgabe</label>
+            <textarea id="returnNotes" placeholder="Schäden? Probleme? ..."></textarea>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;" id="returnChecklistWrap"></div>
+
+        <div id="returnEnd" style="margin-top:20px;">
+          <div class="bannerOk" id="closedBanner" style="display:none;">Vorgang ist abgeschlossen! Keine Änderungen mehr möglich.</div>
+          <div class="sigBox" id="returnSigBox">
+            <h3 class="sectionTitle" style="margin-top:0;">Bestätigung der Rückgabe</h3>
+            <div class="tiny" style="color:#991b1b; margin-bottom:10px;" id="returnSigLockMsg"></div>
+            <div class="row cols2">
+              <div>
+                <label>Unterschrift Gast</label>
+                <canvas id="sigRCustomer" class="sig"></canvas>
+                <button type="button" class="ghost" style="margin-top:6px;" onclick="clearSig('sigRCustomer')">Löschen</button>
+              </div>
+              <div>
+                <label>Unterschrift Vermieter</label>
+                <canvas id="sigRStaff" class="sig"></canvas>
+                <button type="button" class="ghost" style="margin-top:6px;" onclick="clearSig('sigRStaff')">Löschen</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
     </section>
 
@@ -208,21 +293,38 @@
     </section>
   </div>
 
-  <!-- MODALS UNVERÄNDERT -->
   <div id="camModal" class="modal noPrint" role="dialog" aria-modal="true" aria-label="Kamera">
-    <!-- ... unverändert ... -->
+    <div class="modalCard">
+      <h2 class="sectionTitle" id="camTitle" style="margin-top:0;">Kamera</h2>
+      <video id="camVideo" playsinline></video>
+      <canvas id="camCanvas" style="display:none;"></canvas>
+      <div class="modalRow">
+        <button type="button" class="primary" onclick="captureCam()">Auslösen</button>
+        <button type="button" onclick="switchCam()">Kamera wechseln</button>
+        <button type="button" class="ghost" onclick="closeCam()">Abbrechen</button>
+      </div>
+    </div>
   </div>
 
   <div id="fileModal" class="modal noPrint" role="dialog" aria-modal="true" aria-label="Foto aufnehmen Fallback">
-    <!-- ... unverändert ... -->
+    <div class="modalCard">
+      <h2 class="sectionTitle" id="fileTitle" style="margin-top:0;">Foto aufnehmen / wählen</h2>
+      <p class="tiny">Die Live-Kamera wird hier nicht unterstützt. Bitte lade ein Foto hoch oder nimm es über die System-App auf.</p>
+      <div class="modalRow">
+        <label class="fileBtn">
+          Foto auswählen / knipsen
+          <input type="file" id="fallbackFile" accept="image/*" capture="environment">
+        </label>
+        <button type="button" class="ghost" onclick="closeFileModal()">Abbrechen</button>
+      </div>
+    </div>
   </div>
 
   <div id="pdfLoadingOverlay" class="pdfLoading">
-    <!-- ... unverändert ... -->
+    PDF wird generiert...
   </div>
 
 <script>
-
 const COMPANY = { name: "Warnow Moments" };
 const PDF_FOOTER_LINES = [
   `${COMPANY.name} | Geschäftsführer: C. Völz, J. Lindloff-Rühse | Steuernummer: i. G.`,
@@ -232,8 +334,8 @@ const PDF_FOOTER_LINES = [
 /* Supabase */
 const SUPABASE_URL = "https://fnktiyujyznbbhwkeyww.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_cJyOwgz2NXfDiTj7mRUVrQ_VMAMoVdd";
-const { createClient } = supabase;  // ← NEU!
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);  // ← FIX!
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const TABLE_PROTOCOLS = "protocols";
 
 /* Global state */
@@ -260,6 +362,7 @@ function setBusy(on){
     if(el) el.disabled = busy || !isAuthed;
   });
 }
+
 function setAuthState(authed, userEmail){
   isAuthed = !!authed;
   const status = document.getElementById("authStatus");
@@ -273,6 +376,9 @@ function setAuthState(authed, userEmail){
   }
   const area = document.getElementById("appArea");
   if(area){
+    // WICHTIG: appArea wieder sichtbar machen!
+    area.style.display = isAuthed ? "block" : "none"; 
+    
     area.querySelectorAll("input, textarea, select, button").forEach(el=>{
       el.disabled = !isAuthed || busy;
     });
@@ -286,6 +392,7 @@ function setAuthState(authed, userEmail){
     refreshSaved();
   }
 }
+
 async function hasSession(){
   try{
     const { data } = await sb.auth.getSession();
@@ -979,7 +1086,7 @@ function validatePhase(phase){
   return { ok: missing.length===0, missing };
 }
 
-/* Central record: MATCH Supabase columns exactly */
+/* Central record */
 function collectCentralRecord(){
   const record_id = document.getElementById("record_id").value.trim();
 
@@ -1003,7 +1110,6 @@ function collectCentralRecord(){
     checklist: returnItems
   };
 
-  // payload: kompletter Stand (ohne Ausweis/Signaturen), kann für spätere Auswertungen nützlich sein
   const payload = {
     record_id,
     booking_ref,
@@ -1119,7 +1225,6 @@ async function openRecord(recordId){
     if(central.booking_ref) document.getElementById("bookingRef").value = central.booking_ref;
     if(central.resource_id) document.getElementById("raftId").value = central.resource_id;
 
-    // handover/return Daten (ohne lokale sensiblen Dinge)
     try{
       if(central.handover?.date) document.getElementById("handoverDate").value = central.handover.date;
       if(central.handover?.time) document.getElementById("handoverTime").value = central.handover.time;
@@ -1140,7 +1245,6 @@ async function openRecord(recordId){
     closedAt = null;
   }
 
-  // Lokales Wiederherstellen (Kunde/Email/Fotos/Signaturen)
   const local = loadSensitiveLocal(recordId);
 
   sigPads.sigHCustomer.clear(); sigPads.sigHStaff.clear(); sigPads.sigRCustomer.clear(); sigPads.sigRStaff.clear();
@@ -1480,7 +1584,7 @@ function updateShareStatus(){
   }catch(e){ el.textContent = ""; }
 }
 
-/* Init - EMERGENCY SYNTAX FIX */
+/* Init - FIXED SYNTAX */
 async function init(){
   setNetStatus();
   try {
@@ -1516,56 +1620,6 @@ async function init(){
       setAuthState(true, user.email);
     }
   } catch(e) { console.log('Auth failed:', e); }
-}
-  // ✅ ÜBERGABE & RÜCKGABE ITEMS - Sichtbar machen!
-  handoverItems = buildItems("handover", HANDOVER_DEFAULT);
-  returnItems   = buildItems("return", RETURN_DEFAULT);
-
-  renderChecklist("handover");
-  renderChecklist("return");
-
-  // 🔧 FIXED: Null-Checks für DOM-Elemente
-  const recordEl = document.getElementById("record_id");
-  if(recordEl) recordEl.value = suggestRecordId();
-  
-  const hDateEl = document.getElementById("handoverDate");
-  if(hDateEl) hDateEl.value = nowLocalDate();
-  
-  const hTimeEl = document.getElementById("handoverTime");
-  if(hTimeEl) hTimeEl.value = nowLocalTime();
-  
-  const rDateEl = document.getElementById("returnDate");
-  if(rDateEl) rDateEl.value = nowLocalDate();
-  
-  const rTimeEl = document.getElementById("returnTime");
-  if(rTimeEl) rTimeEl.value = nowLocalTime();
-
-  // Safe calls
-  try { syncIdPhotoUI(false); } catch(e) {}
-  try { updateWorkflow(); } catch(e) {}
-  try { updatePhaseLocks(); } catch(e) {}
-  try { updateShareStatus(); } catch(e) {}
-
-  // Auth State Listener
-  sb.auth.onAuthStateChange((event, session) => {
-    if(session?.user) {
-      setAuthState(true, session.user.email);
-    } else {
-      setAuthState(false);
-    }
-  });
-
-  // Check existing session
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    if(session) {
-      const { data: { user } } = await sb.auth.getUser();
-      setAuthState(true, user.email);
-    }
-  } catch(e) {
-    console.log('Auth session check failed:', e);
-  }
-}
 
   window.addEventListener("pageshow", ()=>requestAnimationFrame(()=>requestAnimationFrame(rehydrateNow)));
   window.addEventListener("pagehide", ()=>{ try{ saveSensitiveLocal(); }catch(e){} });
